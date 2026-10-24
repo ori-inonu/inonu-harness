@@ -1,0 +1,10 @@
+.codegraph/
+.env
+.env.*
+!.env.example
+*.log
+node_modules/
+dist/
+coverage/
+.DS_Store
+Thumbs.db
