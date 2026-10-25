@@ -1,0 +1,17 @@
+{
+  "platform": null,
+  "configurations": {
+    "global": {"state": "unknown", "source": "user_codex_config", "document": null},
+    "project": {"state": "not_found", "source": "project_codex_config", "document": null}
+  },
+  "skills": null,
+  "cli": {
+    "codex": {"available": null, "version_output": null},
+    "rtk": {"available": false, "version_output": null},
+    "headroom": {"available": null, "version_output": null},
+    "codegraph": {"available": false, "version_output": null},
+    "jev-sdd": {"available": null, "version_output": null}
+  },
+  "mcp_registry": {"available": false, "servers": null},
+  "documentation": []
+}

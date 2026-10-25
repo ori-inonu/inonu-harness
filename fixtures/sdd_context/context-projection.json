@@ -1,0 +1,84 @@
+{
+  "fixture_schema_version": 1,
+  "fixture_id": "sdd-context-projection-v1",
+  "task_id": "sdd.context-projection",
+  "config_id": "sdd-context.opt-in.v1",
+  "runtime": null,
+  "model": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "cost_usd": null,
+  "tool_calls": [],
+  "failures": [],
+  "blocks": [],
+  "recoveries": [],
+  "acceptance_ids": [
+    "explicit-order-preserved",
+    "pending-and-invalidated-states-projected",
+    "recommendation-remains-unauthorized",
+    "only-allowlisted-fields-projected",
+    "read-does-not-change-history",
+    "disabled-default-returns-no-context"
+  ],
+  "scenario": {
+    "decisions": [
+      {
+        "id": "root-premise",
+        "question": "Which local premise applies?",
+        "alternatives": [
+          {"id": "option-a", "label": "Option A"},
+          {"id": "option-b", "label": "Option B"}
+        ],
+        "constraints": ["local-only"],
+        "required_criteria": ["reproducible"],
+        "dependencies": [],
+        "evidence": [
+          {
+            "source": "fixture",
+            "reference": "docs/spec.md#M1-R02",
+            "criterion_id": "reproducible",
+            "version": "1",
+            "provenance": "freeform evidence detail must not enter context"
+          }
+        ]
+      },
+      {
+        "id": "dependent-choice",
+        "question": "Which dependent choice applies?",
+        "alternatives": [
+          {"id": "option-a", "label": "Option A"},
+          {"id": "option-b", "label": "Option B"}
+        ],
+        "constraints": ["respect-premise"],
+        "required_criteria": ["safe"],
+        "dependencies": ["root-premise"],
+        "evidence": []
+      },
+      {
+        "id": "recommended-choice",
+        "question": "Which option has a recommendation?",
+        "alternatives": [
+          {"id": "option-a", "label": "Option A"},
+          {"id": "option-b", "label": "Option B"}
+        ],
+        "constraints": [],
+        "required_criteria": ["reviewed"],
+        "dependencies": [],
+        "evidence": []
+      }
+    ],
+    "recommendation": {
+      "decision_id": "recommended-choice",
+      "alternative_id": "option-b",
+      "source": "local-fixture",
+      "version": "fixture-1",
+      "provenance": "freeform recommendation detail must not enter context"
+    },
+    "revision": {
+      "decision_id": "root-premise",
+      "question": "Which revised local premise applies?",
+      "relevant_premise_changed": true
+    },
+    "request_ids": ["recommended-choice", "dependent-choice", "root-premise"]
+  }
+}

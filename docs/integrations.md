@@ -1,75 +1,91 @@
-# Integrações
+# Integration inventory
 
-As configurações desta página têm estados diferentes: comandos oficiais verificados, sugestões da conversa compartilhada e pontos ainda não validados. Não aplique uma sugestão de Headroom/Ponytail até conferir o release instalado e o nome real das ferramentas MCP.
+This page records the evidence gathered for the M0 implementation host on 2026-10-24. It is not a claim that another agent or machine has the same tools. `python -m inonu_harness doctor` rechecks the local host without printing configuration values or private paths. A registered MCP server is not evidence that it is reachable in every Codex client; the standalone doctor reports accessibility as `unknown` because it has no official API for inspecting the active tool set.
 
-## Responsabilidade e estado
+## Observed state
 
-| Ferramenta | Papel proposto | Estado |
+| Component | Evidence from this host | Limit |
 | --- | --- | --- |
-| RTK | Filtrar saídas ruidosas de comandos de terminal | Comando Codex conferido; hook de projeto não aplicado |
-| Headroom | Gerenciar contexto e permitir recuperação do conteúdo original | Perfil coding é uma proposta da conversa; nomes das variáveis ainda precisam ser validados |
-| Ponytail | Simplificar escopo e implementação sem enfraquecer aceite e segurança | Usar full como política; variável de ambiente da conversa ainda não validada |
-| CodeGraph | Indexar relações e recuperar evidência estrutural do repositório | CLI 3.0.1 instalada, MCP do Codex registrado e índice deste projeto criado |
+| Codex | CLI `0.164.0-alpha.11.1`; Python `3.14.7`; Windows PowerShell | `codex --version` does not report the desktop app version. |
+| Jev | `jev-sdd` MCP calls worked in the coordinator chat; no standalone `jev-sdd` command was found | Local CLI doctor can see registration, not whether another session loaded it. Transport portability is unverified. |
+| RTK | CLI `1.0.1` present; a global hook reference targets Bash | This session used PowerShell; the hook did not run here. Installed does not mean operational. |
+| Headroom | `0.41.0` and MCP tools were available in the coordinator chat | The local proxy was unreachable. CLI doctor cannot assert active MCP reachability. |
+| CodeGraph | CLI `3.0.1` present; MCP `orient` worked in the coordinator chat; a local index exists | MCP availability is specific to that session. The doctor reports it as `unknown`. |
+| Ponytail | Plugin package `5.3.2` and its skill are present; the skill was active in the implementation conversation | This is agent guidance, not a separate service or decision authority. |
+| Matt Pocock SDD skills | Local adapters and an upstream copy were present | No release or Git revision metadata was available, so no version is asserted. |
+| Sequential Thinking | Not present in the Codex MCP registry | Installation and operational state remain unknown. It is not a core dependency. |
 
-## CodeGraph
+The inventory intentionally omits local configuration values, hook commands, credentials, and paths. MCP names in a local report mean only “registered in the visible configuration,” unless a host API proves more.
 
-A documentação oficial recomenda instalar a CLI pelo npm e verificar o runtime com codegraph doctor. A integração MCP do Codex é configurada no perfil local do agente; revise primeiro o plano de escrita do instalador. O Codex compartilha sua configuração MCP entre CLI e extensão, então cada agente configura a própria máquina.
+## Tool contracts and candidates
 
-~~~powershell
-npm install -g @lzehrung/codegraph@3.0.1
-codegraph doctor
-codegraph install --target codex --dry-run
-~~~
+### Jev
 
-Depois de revisar os arquivos e o escopo que o dry-run propõe, a gravação pode ser aplicada localmente:
+- **Problem:** choose among a bounded set of engineering alternatives with advisory consensus.
+- **Input/output contract:** the observed MCP contract accepts `consensus_plan({spec})`, followed by `consensus_run({spec})` with the same sanitized decision object and no `max_calls` unless explicitly required. A usable consensus can include a leader and spec hash. No result grants authorization.
+- **Inonu candidate:** obtain an allowed alternative for a pending decision, then store only the bounded recommendation, available provenance, and version in the Decision Graph.
+- **Dependencies and overlap:** host MCP transport and the existing Jev service; overlaps human review and graph recommendation records. The Python adapter exposes an injected transport and deterministic mock only; no portable live transport is configured in this CLI.
+- **License:** unknown for the configured JEV service.
+- **Test:** use the mock for allowed/forbidden options, malformed results, timeout, unavailability, and proof that no authorization is written.
+- **Implement it ourselves when:** the confirmed host transport is unavailable and repeated local tasks need a bounded, auditable substitute. Do not recreate the model judge.
 
-~~~powershell
-codegraph install --target codex --yes
-~~~
+### RTK
 
-No diretório do repositório, inicialize o índice:
+- **Problem:** reduce noise in supported shell command output.
+- **Input/output contract:** a supported local command goes through the RTK CLI or a compatible hook; the output is compacted. Exact coverage depends on the installed RTK component.
+- **Inonu candidate:** keep routine terminal results concise while preserving a route to the original output for debugging and verification.
+- **Dependencies and overlap:** RTK CLI plus a supported shell/hook route; overlaps agent summarization and other output filters. The host hook was Bash-oriented while this session used PowerShell, so the automatic path was not validated.
+- **License:** RTK CLI is Apache-2.0; `rtk-engine` and the separate `rtk-proxy` use BUSL-1.1 terms. These components have different licenses.
+- **Test:** compare compacted and original success/error output on fixed commands, including retrieval of the original.
+- **Implement it ourselves when:** a measured fixture shows that runtime filtering does not preserve the needed information. Do not duplicate RTK's supported command filters.
 
-~~~powershell
-codegraph init
-codegraph status --root .
-~~~
+### Headroom
 
-O índice e o cache ficam em .codegraph/ e não entram no Git. O comando init pode ajustar o .gitignore; este repositório já ignora essa pasta. Não inicie um servidor persistente em background: a integração MCP local deve ser controlada pelo agente.
+- **Problem:** selectively compress unusually long context sources and retrieve original content when needed.
+- **Input/output contract:** a caller supplies a document, log, or JSON payload to an available compression/retrieval tool; the result is a compressed representation or retrieved source content. The MCP tools also expose statistics.
+- **Inonu candidate:** use it on unusually long non-terminal material while preserving access to the original for checks and debugging.
+- **Dependencies and overlap:** Headroom package or MCP tool and a caller choosing the source; overlaps RTK output filtering, file search, and model context handling. The local proxy was unreachable in the observed host.
+- **License:** Apache-2.0.
+- **Test:** use a local long fixture and verify recovered facts against the source; do not infer token or cost savings without measurement.
+- **Implement it ourselves when:** repeated tests show a retrieval or compression gap that the supported Headroom API does not cover.
 
-Neste ambiente, a instalação 3.0.1 passou no doctor, o preview do Codex apontou apenas o skill CodeGraph e a seção MCP global, e o instalador verificou a configuração gravada. A sessão atual precisa recarregar o Codex para carregar as ferramentas MCP.
+### CodeGraph
 
-Referências: [instalação CodeGraph](https://github.com/lzehrung/codegraph/blob/main/docs/installation.md), [servidor MCP CodeGraph](https://github.com/lzehrung/codegraph/blob/main/docs/mcp.md), [release 3.0.1](https://github.com/lzehrung/codegraph/releases/tag/v3.0.1).
+- **Problem:** navigate symbols, dependency relationships, duplicates, and change impact beyond text search.
+- **Input/output contract:** a local repository/index is queried through its CLI or MCP; supported results include repository orientation, symbol or dependency information, and impact evidence.
+- **Inonu candidate:** target navigation and impact questions, then link the relevant source evidence to a decision or review.
+- **Dependencies and overlap:** CodeGraph CLI/MCP and a local repository index; overlaps `rg`, language-server navigation, and test/compiler dependency graphs. The local CLI version was `3.0.1`; MCP access was observed only in the coordinator chat. The exact local package-to-upstream mapping was not proven by the doctor.
+- **License:** MIT for the [CodeGraph repository](https://github.com/codegraph-ai/CodeGraph); confirm the installed distribution's source before relying on that license for the local binary.
+- **Test:** run one bounded symbol/dependency query on a deterministic local fixture and compare it to known references.
+- **Implement it ourselves when:** a measured navigation need persists and the installed CodeGraph interface does not provide the required evidence.
 
-## RTK
+### Ponytail
 
-A versão atual do guia RTK registra rtk init --codex para configurar este repositório e rtk init -g --codex para configurar o perfil global. Prefira o escopo do projeto quando quiser compartilhar o comportamento e evitar mudar outros repositórios. Revise o plano de escrita antes de aplicar:
+- **Problem:** keep coding changes small while retaining correctness and necessary checks.
+- **Input/output contract:** a coding task and repository context are read by the agent skill system; output is guidance to the coding agent, not a runtime service.
+- **Inonu candidate:** apply the existing skill when choosing implementation scope and reviewing a change; do not build a second policy engine.
+- **Dependencies and overlap:** Codex skill discovery/loading; overlaps repository instructions and implementation/review skills.
+- **License:** the upstream skill frontmatter declares MIT.
+- **Test:** review a fixed change and verify that simplifying it did not remove acceptance checks, validation, security, or accessibility.
+- **Implement it ourselves when:** repeated examples show a concrete gap in the guidance; no replacement is needed now.
 
-~~~powershell
-rtk init --codex --dry-run
-~~~
+### Sequential Thinking
 
-O preview deste repositório propôs criar RTK.md, acrescentar uma referência a ele em AGENTS.md e alterar .codex/hooks.json. Não apliquei esse hook: o processador Codex do RTK registra um matcher Bash, enquanto os comandos desta sessão usam PowerShell. Ative-o apenas em um host em que as chamadas de shell passem por Bash. A reescrita do RTK continua sujeita às verificações nativas de permissão e sandbox do Codex.
+- **Problem:** structure branching or revision for a bounded multi-step question.
+- **Input/output contract:** the specific server receives a question and returns intermediate or final structured content; this installation was not found, so its contract was not exercised here.
+- **Inonu candidate:** none in the core. The Decision Graph already models durable dependencies and revisions.
+- **Dependencies and overlap:** a Sequential Thinking MCP server and host transport; overlaps agent planning, successive Jev decisions, and graph dependencies.
+- **License:** the upstream MCP server documentation identifies MIT.
+- **Test:** compare a deterministic branching task with and without the tool, and confirm that no hidden model reasoning is persisted.
+- **Implement it ourselves when:** a measured use case needs durable branching that the existing planning and Decision Graph cannot represent.
 
-A redução de saída e a estimativa de tokens do RTK não equivalem automaticamente a uma redução igual na fatura do modelo.
+## Source references
 
-Referências: [Quick Start do RTK](https://github.com/rtk-ai/rtk/blob/develop/docs/guide/getting-started/quick-start.md), [hook do Codex](https://github.com/rtk-ai/rtk/blob/develop/hooks/codex/README.md).
+- [RTK license overview](https://github.com/rtk-ai/rtk#license), [RTK engine license](https://github.com/rtk-ai/rtk/blob/develop/engine/LICENSE)
+- [Headroom repository and license](https://github.com/headroomlabs-ai/headroom)
+- [CodeGraph repository and license](https://github.com/codegraph-ai/CodeGraph)
+- [Sequential Thinking server documentation and license](https://github.com/modelcontextprotocol/servers/blob/main/src/sequentialthinking/README.md)
+- [Ponytail upstream repository](https://github.com/DietrichGebert/ponytail)
+- [GitHub Actions checkout](https://github.com/actions/checkout), [setup-python](https://github.com/actions/setup-python)
 
-## Headroom e Ponytail
-
-A conversa propõe este ponto de partida, mas os comandos e as variáveis precisam ser confirmados na versão instalada antes de ativação:
-
-~~~sh
-HEADROOM_SAVINGS_PROFILE=coding
-HEADROOM_COMPRESS_USER_MESSAGES=0
-HEADROOM_PROTECT_TOOL_RESULTS=codegraph_explore
-PONYTAIL_DEFAULT_MODE=full
-headroom wrap codex --code-memory none
-~~~
-
-Não comprima com perda perguntas, requisitos, decisões, contratos ou evidências enviados ao JEV. Evite dupla compressão de saída RTK pelo Headroom e preserve um caminho para recuperar o conteúdo original em debugging, segurança, testes e alterações críticas. Confirme se codegraph_explore é o nome efetivamente exposto pelo MCP antes de protegê-lo por nome.
-
-Ponytail é uma política de simplificação dentro do SDD, não um estágio de compressão de contexto. A proposta é detectar complexidade desnecessária no plano, implementar a menor solução completa em full e revisar a mudança sem remover critérios de aceite, acessibilidade, validação ou segurança. Não use ultra globalmente enquanto houver especificações aprovadas; reserve o questionamento de requisitos para uma etapa de descoberta deliberada.
-
-## Separação de camadas
-
-Use CodeGraph para estrutura do código, RTK para saída de terminal, Headroom para contexto e recuperação e Ponytail para simplicidade da solução. Não ative Serena, grafo nativo do Headroom e CodeGraph juntos sem medir a sobreposição.
+No source code or implementation from these tools is copied into Inonu.

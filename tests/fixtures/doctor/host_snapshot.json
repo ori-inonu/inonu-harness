@@ -1,0 +1,69 @@
+{
+  "platform": {
+    "name": "Windows",
+    "release": "11",
+    "architecture": "AMD64",
+    "python_version": "3.14.7"
+  },
+  "configurations": {
+    "global": {
+      "state": "configured",
+      "source": "user_codex_config",
+      "document": {
+        "mcp_servers": {
+          "jev-sdd": {"command": "PRIVATE_JEV_COMMAND", "env": {"API_KEY": "PRIVATE_JEV_SECRET"}},
+          "codegraph": {"command": "PRIVATE_CODEGRAPH_COMMAND", "args": ["PRIVATE_ARGUMENT"]},
+          "headroom": {"command": "PRIVATE_HEADROOM_COMMAND"}
+        },
+        "hooks": {
+          "PreToolUse": [
+            {"matcher": "Bash", "hooks": [{"type": "command", "command": "bash -lc rtk PRIVATE_BASH_HOOK"}]},
+            {"matcher": "Bash", "hooks": [{"type": "command", "command": "bash -lc rtk PRIVATE_DUPLICATE_HOOK"}]},
+            {"matcher": "PowerShell", "hooks": [{"type": "command", "commandWindows": "pwsh -NoProfile -Command PRIVATE_PS_HOOK"}]}
+          ],
+          "SessionStart": [
+            {"hooks": [{"type": "command", "command": "PRIVATE_SESSION_HOOK"}]}
+          ]
+        },
+        "prompt": "PRIVATE_PROMPT_TEXT",
+        "api_key": "PRIVATE_DIRECT_SECRET",
+        "path": "C:\\Users\\PRIVATE_USER\\private-workspace"
+      }
+    },
+    "project": {
+      "state": "configured",
+      "source": "project_codex_config",
+      "document": {
+        "mcp_servers": {
+          "codegraph": {"command": "DIFFERENT_PRIVATE_CODEGRAPH_COMMAND"}
+        },
+        "hooks": {
+          "SessionStart": [
+            {"hooks": [{"type": "command", "commandWindows": "powershell -File PRIVATE_OTHER_HOOK.ps1"}]}
+          ]
+        }
+      }
+    }
+  },
+  "skills": [
+    {"name": "jev-engineering", "origin": "user_codex", "version": null},
+    {"name": "Ponytail", "origin": "plugin_cache", "version": "5.3.2"},
+    {"name": "codegraph", "origin": "user_codex", "version": null}
+  ],
+  "cli": {
+    "codex": {"available": true, "version_output": "codex-cli 0.164.0-alpha.11.1"},
+    "rtk": {"available": true, "version_output": "rtk 1.0.1"},
+    "headroom": {"available": true, "version_output": "headroom 0.41.0"},
+    "codegraph": {"available": true, "version_output": "codegraph 3.0.1"},
+    "jev-sdd": {"available": false, "version_output": null}
+  },
+  "mcp_registry": {
+    "available": true,
+    "servers": [
+      {"name": "jev-sdd", "status": "running", "command": "PRIVATE_COMMAND"},
+      {"name": "codegraph", "status": "running", "env": {"TOKEN": "PRIVATE_MCP_TOKEN"}},
+      {"name": "headroom", "status": "running"}
+    ]
+  },
+  "documentation": ["jev-sdd", "rtk", "headroom", "codegraph", "ponytail", "sequential thinking"]
+}

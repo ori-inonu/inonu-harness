@@ -1,0 +1,25 @@
+{
+  "fixture_schema_version": 1,
+  "fixture_id": "acceptance-v1",
+  "task_id": "baseline.acceptance",
+  "config_id": "fixture.acceptance.v1",
+  "acceptance": [
+    {
+      "id": "offline-fixture-loaded",
+      "passed": true
+    },
+    {
+      "id": "unobserved-usage-remains-null",
+      "passed": true
+    }
+  ],
+  "runtime": null,
+  "model": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "cost_usd": null,
+  "tool_calls": [],
+  "failures": [],
+  "blocks": [],
+  "recoveries": []
+}
