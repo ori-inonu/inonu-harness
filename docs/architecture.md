@@ -21,6 +21,17 @@ O M3 é um protocolo documental de avaliação exploratória. O piloto não foi 
 
 A auditoria v0.8 não altera a sequência SDD de oito etapas e não executa verificações nem serviços. Seu relatório cobre apenas os vínculos e bytes declarados: hash detecta drift, mas não autentica uma execução nem valida significado de Markdown, requisitos omitidos ou conteúdo semântico. Os manifestos de demonstração são casos sintéticos.
 
+## Regras estruturais testadas
+
+`tests/test_architecture.py` roda na suíte unitária e, portanto, no `check`. Ele verifica os imports do código e falha quando:
+
+- um import absoluto em `inonu_harness/` ou `scripts/` não aponta para a biblioteca padrão do Python (`sys.stdlib_module_names`) nem para `inonu_harness`;
+- um módulo diferente de `cli.py`, `__main__.py` e do executor `scripts/inonu.py` (que existe para chamar `cli.main`) importa `inonu_harness.cli` ou `inonu_harness.__main__`;
+- um módulo, em qualquer subpacote, chama `__import__`, `importlib.import_module`, `exec` ou `eval`, que a verificação estática não enxerga;
+- o módulo de lint de documentação (`docs_lint.py`) importa `cli`.
+
+A mensagem de falha indica o arquivo e o que alterar. Com isso, o pacote e `scripts/` não importam dependências de terceiros. O teste cobre apenas essas regras: não prova o comportamento do código nem outras regras de arquitetura. O `docs lint` tem o mesmo limite: verifica tamanho, imports `@arquivo` e links, não se os documentos são verdadeiros ou atuais.
+
 ## Limites e trabalho futuro
 
 O adaptador de contexto não é um mecanismo geral de recuperação de símbolos, diffs ou conteúdo. O inventário de ambiente, o grafo e a verificação são componentes locais separados; não há um motor geral de contexto/evidências, runtime próprio ou serviço remoto implementado neste marco. Codex continua sendo o ambiente atual; DeepSeek Harness e Pi permanecem candidatos sem escolha aceita.

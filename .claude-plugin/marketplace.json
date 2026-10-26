@@ -1,0 +1,14 @@
+{
+  "name": "inonu-harness",
+  "owner": {
+    "name": "Inonu Harness"
+  },
+  "description": "Local-first diagnostics, deterministic baselines, and decision history",
+  "plugins": [
+    {
+      "name": "inonu-harness",
+      "source": "./",
+      "description": "Local-first diagnostics, deterministic baselines, and decision history"
+    }
+  ]
+}

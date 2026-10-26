@@ -1,6 +1,292 @@
 # Changelog
 
-This changelog prepares release 0.9.0. Earlier entries record repository milestones and do not imply separate published releases or Git tags.
+This changelog prepares release 0.23.0. Earlier entries record repository milestones and do not imply separate published releases or Git tags.
+
+## 0.23.0 — 2026-10-26
+
+### Added
+
+- `python -m inonu_harness jev spec --decision PATH --doc PATH [--doc PATH ...] [--root DIR] [--max-facts N]` prints one Jev decision spec as compact, ASCII-escaped JSON, ready to pass as `spec` to `consensus_plan` and then `consensus_run`. For each `--doc`, in the order given, it writes a source fact (the path relative to `--root`, and the first 16 hex digits of the file's SHA-256) and then the document's text as facts of at most 300 characters. Whitespace inside a line is collapsed and blank lines are dropped; nothing is summarized, reordered or left out. Length is counted in UTF-16 code units, as the judge's server counts it, so an emoji counts 2.
+- The command calls no Jev, decides nothing and writes no file. It exits 2, with a fixed message and nothing on stdout, when no `--doc` is given, a document is not a regular UTF-8 file of at most 64 KiB inside `--root`, a document is a symbolic link, has a colon in its file name (an NTFS alternate data stream), is given twice (also through a hard link), holds a NUL character or no text, or matches the secret patterns. A decision file must be strict UTF-8 JSON of at most 64 KiB with no top-level key other than `id`, `goal`, `facts`, `rails`, `options`, `forbidden` and `unknowns`, and its facts may not use the `doc<N>_` keys the documents own.
+- The spec is checked by the existing `_validate_spec` before it is printed, so the Jev limits apply: id 40 characters, goal 600, option label 120, option what 400, fact 300, at most 12 rails of 300, 2 to 8 options. `_validate_spec` now counts length in UTF-16 code units, as the server does (its source uses a JavaScript string length), so a spec with emoji that the server would refuse is refused here too. A document whose facts exceed `--max-facts` (default 80) is refused with the count and the limit; nothing is truncated.
+- The code is in `inonu_harness/jev_context.py`. `tests/test_jev_context.py` covers the chunk boundaries (299, 300 and 301 characters, packing with the newline, the sentence cut at index 60, emoji, combining marks), a generated-text check that no text is lost, the source facts and their order, every refusal above, each Jev limit at its edge, the fact budget, a secret split by a fact boundary, common token formats, determinism, that nothing is written, and that `JevAdapter` with `MockJevTransport` accepts the output.
+- [docs/sdd-workflow.md](docs/sdd-workflow.md) states the rule that no Jev call goes out without a document whose text is sent as facts, and that the document must not state the answer. [docs/integrations.md](docs/integrations.md) records what the judge sees, the limits and the generic `internal error`.
+
+### Changed
+
+- Version 0.23.0 in `inonu_harness/__init__.py`, `pyproject.toml`, `.claude-plugin/plugin.json` and the version assertions in the tests.
+
+### Limits
+
+- The command does not check whether a document states the answer, or whether it is true or current. Those checks remain human.
+- The sensitive-text scan covers the judge's own patterns and a short list of common token formats, on the whole text of each document. It does not catch a password written in prose or a custom token. Keep credentials out of documents. A run of 32 to 44 letters and digits with no zero, such as some commit ids, can be refused as a possible address.
+- A line with no space is cut every 300 units, so a word can be split between two facts, though never between a letter and its combining mark. The text is kept, but the judge sees the split, and nothing in the facts marks where a line was split.
+- The 300-character chunk size is the validator's fact limit written as a constant in `jev_context.py`; `jev.py` was not changed. A test fails if the two drift apart.
+- `--max-facts` is a local budget. Jev does not limit the number of facts in practice (see [docs/integrations.md](docs/integrations.md)).
+- The symbolic-link refusal is tested with a patched `Path.is_symlink`, because the Windows host used for this release could not create a link. A real link was not exercised here.
+
+## 0.22.0 — 2026-10-26
+
+### Added
+
+- `bundle status` gives each item an `ownership` value, read from the ownership ledger that `bundle apply` writes. `ours` means the ledger records the item and what is installed matches the recorded digest. `modified` means the item is recorded but differs, or is gone. `foreign` means it is installed but not recorded. `none` means it is neither. `unknown` means the ledger, or that item's host file, cannot be read or parsed.
+- The report adds a top-level `ledger` (`absent`, `present` or `unreadable`) and `ownership_summary`, a count per ownership value sorted by name, as `summary` does for `state`.
+- The digests are the ones `bundle apply` already records. The installed `SKILL.md` of each host, the worker agent file and the Codex server's marked block are compared as exact bytes. The Claude MCP entry and the Stop hook group are compared as canonical JSON, so key order and spacing do not matter; any group under `hooks.Stop` may match. A Codex server is `ours` only if no table or sub-table outside the markers changes its effective configuration. An outdated skill that the bundle wrote is `ours`. No ledger schema or write path changes.
+- `tests/test_bundle_ownership.py` builds the installed state with the real `bundle apply --apply` into a temporary home, with fake launchers on `PATH`. It covers each ownership value for the skill on both hosts, the worker agent, a Claude and a Codex MCP entry and the Stop hook; an outdated skill; canonical-JSON digests; a user's Stop group placed first; a Codex table added outside the markers; a CRLF rewrite; unreadable ledgers (including an empty file and a `schema_version` of `true` or `1.0`); malformed and unreadable host files; the summaries; byte-identical homes; and output with no planted secret or home path.
+
+### Changed
+
+- `bundle status` keeps every existing key, every `state` value and `summary`. It now reads the ledger as well, and still writes nothing.
+- A skill file that exists but cannot be read is now reported as `unknown` by `bundle status` and `bundle plan`, instead of making them exit 2 with no output. `bundle apply` is unchanged.
+- A ledger whose `schema_version` is `true` or `1.0` is now refused as a wrong schema by `status`, `apply` and `remove` alike; it was read as valid. A ledger that `bundle apply` wrote always has the integer 1, so nothing a real ledger holds changes.
+- Version 0.22.0 in `inonu_harness/__init__.py`, `pyproject.toml`, `.claude-plugin/plugin.json` and the version assertions in the tests.
+
+### Limits
+
+- `ownership` is advisory and read-only. It does not change what `bundle apply` or `bundle remove` do; both still decide from the ledger and the file contents at the moment of the write.
+- `modified` also covers an item the user deleted. The report does not separate a deletion from an edit.
+- A Codex block whose line endings changed is `modified`, as `apply` reports it as a conflict.
+- The skill's `ownership` looks at `SKILL.md` alone, while its `state` also checks the metadata file: a skill whose metadata file was deleted shows `state` `conflict` and `ownership` `ours`.
+
+## 0.21.0 — 2026-10-26
+
+### Added
+
+- `python -m inonu_harness decisions --db PATH ready` lists the pending decisions whose declared dependencies are all authorized. A decision with no dependencies is ready. Each `ready` item carries `id`, `question` and the declared `dependencies`. Each `waiting` item carries `id`, `question` and `waiting_on`: each dependency that is not authorized, in declared order, with its `status` (`pending`, `blocked`, `invalidated`, or `missing` when the database has no such decision). Both lists are sorted by id. Blocked, invalidated and authorized decisions are not listed.
+- `ready` opens the existing database read-only, as `context` and `as-of` do. It changes no schema, and the database file's bytes are not modified. A database that an outside tool switched to WAL mode may still get SQLite `-wal` and `-shm` helper files when it is opened, as `context` and `as-of` already do. Its output is ASCII-escaped like `as-of`, and an invalid or unreadable store exits 2 with nothing on stdout.
+- Stored decision records are now validated when they are read, for every command that reads decisions (`list`, `show`, `history`, `context`, `packet`, `as-of`, `ready`): a field of the wrong shape (a dependency list stored as a string or an object), an unknown status, a record id that does not match its row, and JSON that is invalid or nested too deeply are refused with `decision store contains an unreadable record` and exit 2, instead of being read as an empty list, hiding a decision or raising a traceback. A corrupt record can no longer make a decision look ready.
+- `tests/test_decisions_ready.py` covers an empty database, decisions with and without dependencies, each waiting status, several dependencies in declared order, the move to ready after an authorization, sorting, a missing dependency, determinism, unchanged database bytes, non-ASCII text under a strict ASCII stdout and the exit codes.
+- The README, [the SDD workflow](docs/sdd-workflow.md) and the skill describe the command.
+
+### Changed
+
+- Version 0.21.0 in `inonu_harness/__init__.py`, `pyproject.toml`, `.claude-plugin/plugin.json` and the version assertions in the tests.
+
+### Limits
+
+- `ready` says only that the decision's own declared, direct dependencies are authorized. The graph does not require a decision's dependencies to be authorized before the decision itself, so a decision can be ready while something further upstream is still pending. It does not authorize the decision, claim it for a worker, schedule it or record that anyone has started it.
+- Two writers that revise dependencies at the same instant can still store a dependency cycle, because the cycle check runs outside the write transaction. This predates `ready`; both decisions then appear under `waiting` on each other. It is not fixed here.
+- The output includes each decision's question text, as `show` does, and does not scan for credentials. It has no `--refuse-secret-patterns` option, so review the output before attaching it to an agent.
+- The answer is computed on each read. No readiness flag is stored, so nothing can drift from the decisions it describes.
+
+## 0.20.0 — 2026-10-26
+
+### Added
+
+- `python -m inonu_harness hook stop` is a Stop hook that can block a stop. It reads the hook's JSON from stdin, runs the project's `.inonu/verify.json` checks as argv lists with no shell, and exits 2 with a message when a check fails. It exits 0 when every check passes, when there is no config, or when the block limit is reached, and 1 for an invalid, untrusted or unreadable config or an unexpected error. See [docs/hook.md](docs/hook.md).
+- `hook trust` previews a project's verifier config and, with `--yes`, records its SHA-256 against the resolved path in `<home>/.inonu-harness/hook-trust.json` through an atomic write. `hook untrust` removes the record. The hook reads that file and never writes it, and a config that is unrecorded or changed exits 1 before anything runs.
+- The block limit counts consecutive blocks in a small state file under the system temporary directory and resets on a pass. When it is reached, the hook allows the stop, so a check that never passes stops blocking after that many attempts. If the counter cannot be stored, the hook exits 1 (non-blocking) instead of blocking, because the limit could not be enforced.
+- A failing run reports the attempt, each failing check id with its exit code or `timed out`, and the last 1500 bytes of each check's output, capped at 4000 characters. Each tail passes the credential-pattern scan first and is replaced by a note naming only the matched rules.
+- `bundle apply --with-stop-hook` registers `python <checkout>/scripts/inonu.py hook stop` with a 630-second timeout. The stop-hook item of the plan, the preview and the apply report carries a one-sentence `note` on what the hook does.
+- `tests/test_hook.py` covers strict config parsing, project directory discovery, the trust and drift cases, check execution and timeouts, the block limit, output scanning and the message cap, unexpected input, the trust commands and one end-to-end run through `hook stop` with stdin JSON. The tests use temporary directories and never touch the real home or the real temporary state.
+- The bundle tests cover the new registration and its timeout, status for the current and the legacy command, a conflict with a legacy registration, removal of a recorded legacy registration, and the note.
+- Docs: [docs/hook.md](docs/hook.md), with the config format and an example, the trust workflow, exit codes and the reason for them, limits, and install and removal through the bundle. The README, [the plugin reference](docs/plugin.md), [native host profiles](docs/hosts.md) and the skill have matching updates.
+
+### Changed
+
+- The Stop hook that `bundle apply --with-stop-hook` registers now runs `hook stop` instead of `check`. A Stop hook blocks only on exit 2, and `check` exits 1 on failure, so the old hook could never block. It also ran Inonu's own test suite in every project, and it declared no timeout.
+- `bundle status` and `bundle apply` recognize an earlier registration that ends in ` check` as an Inonu hook. Status reports it `present`, and apply reports a conflict rather than adding a second group. `bundle remove` reverses it when the ledger recorded it.
+- `inonu_harness/bundle.py` renames `is_check_command` to `is_stop_hook_command`. Nothing else imported the old name.
+
+### Limits
+
+- Nothing installs the hook. Only `bundle apply --with-stop-hook --apply` does, and only after the owner has run `hook trust --yes` for the project.
+- A trusted config runs its commands with the owner's permissions. Trust records what was reviewed; it does not sandbox the commands.
+- The host caps consecutive Stop blocks on its own, and that cap resets whenever a tool is called, so it can end a loop before the hook's block limit does.
+- The credential-pattern scan is narrow. A tail that passes it still reaches the model.
+- While the state directory cannot be written, a failing check does not block at all (exit 1 with a message); the host's cap is then the only other limit.
+- The config must be a plain file inside the project: a link to another place is refused, because trust is bound to the project path. A check is stopped at 16 MiB of output; the credential scan covers the last 64 KiB and the shown text is the last 1500 bytes with control characters escaped, so a credential that begins earlier than 64 KiB before the end is not seen.
+- An unledgered legacy Stop hook (a command ending in ` check`) cannot be removed by `bundle remove`, which reports a conflict; delete it by hand.
+- The end-to-end run uses the hook's own stdin contract. A live Claude Code session has not been observed blocking a stop.
+
+## 0.19.0 — 2026-10-26
+
+### Added
+
+- `decisions context` and `decisions packet` accept `--refuse-secret-patterns`. With it, the command scans the object it would print, including a packet's task prompt. On a match it prints nothing to stdout, writes one stderr line naming only rule names and paths, and exits 2. Output without a match is byte-identical to the output without the flag, and without the flag behavior is unchanged.
+- `inonu_harness/secret_scan.py` exposes `scan(value)`, which returns `{"rule", "path"}` findings for eleven narrow formats: `private_key_block`, `aws_access_key_id`, `github_token`, `slack_token`, `google_api_key`, `stripe_live_key`, `anthropic_key`, `openai_style_key`, `jwt`, `bearer_token` and `credential_assignment`. Dict keys and string values are scanned. Paths hold list indices and plain lowercase identifier keys; any other key, and any key that holds credential text, appears as `*`.
+- `tests/test_secret_scan.py` assembles every synthetic credential at run time from fragments, so the repository holds none. It covers each rule, near misses, paths, key scanning, the rule that no matched value reaches stdout or stderr, a one-megabyte near-miss time bound, the flag on both commands and determinism.
+- Docs: a README paragraph, a Portuguese paragraph in [docs/sdd-workflow.md](docs/sdd-workflow.md) and the skill's bullet.
+
+### Limits
+
+- The guard is opt-in and off by default. Callers who attach the output to an agent should pass the flag.
+- It catches only the listed formats. It does not catch passwords in prose, custom tokens or most other credential formats, and it can raise false positives. A match means the text needs review; no match does not prove that it is free of secrets.
+- Matched values are never printed. The guard does not redact, does not scan the decision database or arbitrary files, and makes no network lookup.
+- Matching uses a literal prefix or keyword for every rule, open-ended minimum counts in single-pass matches, and a token boundary for the JWT rule. Linear time is a property of those patterns on the tested inputs, not a proof for every input; the suite runs one-megabyte near-miss inputs for six rule shapes in child processes with a hard time limit, so a quadratic regression fails fast instead of hanging.
+- A string under a dict key is also checked as `key: value`, so a credential-named key with a bare value (for example a `password` field) is found like the text form. A key that overlaps the matched text by eight or more consecutive characters is shown as `*` in a path, so no part of a matched value reaches a finding.
+- With the flag, the requested ids are scanned before the lookup, because the existing "decision not found" error would otherwise echo a token-shaped id.
+- A credential split across fields, list items or the task id and prompt is not joined, so each half is printed.
+
+## 0.18.0 — 2026-10-26
+
+### Added
+
+- `decisions as-of TIMESTAMP [--ids ID...]` prints each decision as it was at an instant, read from its revision history: `python -m inonu_harness decisions --db PATH as-of TIMESTAMP [--ids ID...]`. `TIMESTAMP` is ISO 8601 with an explicit offset or `Z`; a timestamp without one is refused. The JSON object holds `schema_version` 1, `as_of` (the instant in UTC) and `decisions`, sorted by `id`. Each item has `id`, `state`, `revision`, `recorded_at`, `later_revision` and `snapshot`. The snapshot is the history entry with the highest revision recorded at or before the instant, serialized as `decisions show` serializes a decision.
+- An explicit `--ids` decision created after the instant is `not_yet_created`, with `revision`, `recorded_at` and `snapshot` null and `later_revision` true. Without `--ids`, only decisions that existed at the instant are listed.
+- The database is opened read-only, as `decisions context` does. It is never created or written, and its bytes do not change. Invalid input exits 2 with a generic message and nothing on stdout: an unparseable or offset-less timestamp, an id not in the database, or an unreadable or unsupported database.
+- `tests/test_decisions_as_of.py` builds a temporary database through the public API with a controlled clock. It covers an instant before any decision, a time between two revisions, a time equal to a revision, the time after the last revision, a dependent invalidated by a premise change, a later recommendation and authorization, `--ids` filtering and order, the error exits, unchanged bytes and the CLI output.
+- Docs: a README paragraph, a Portuguese paragraph in [docs/sdd-workflow.md](docs/sdd-workflow.md) and the skill's `as-of` bullet.
+
+### Limits
+
+- Times are the clock of the machine that recorded each revision. They are not authenticated, so the result is a local audit aid and not a tamper-proof ledger.
+- The query reads history and cannot show a state older than the first revision. It changes no schema; validity columns, a revision diff and writing or repairing history stay out of scope.
+- The database file is never modified. A database that an outside tool switched to WAL mode may get `-wal` and `-shm` helper files created by SQLite when it is opened, as `decisions context` already does; the store never enables WAL itself.
+- The output is ASCII-escaped, and an unreadable history record now gives exit 2 with a generic message for every decisions command instead of a traceback.
+
+## 0.17.0 — 2026-10-26
+
+### Added
+
+- `check --ref REF` verifies a commit instead of the working tree: `python -m inonu_harness check [--root PATH] [--ref REF]`. `REF` must resolve to a commit (`git rev-parse --verify REF^{commit}`). Git's own blobs for that commit are read with `git ls-tree` and `git cat-file --batch` and written to a temporary directory, with no attribute or line-ending conversion, and unsafe paths (absolute, `..`, `.git`, drive or backslash names) are refused. There the command runs the `compile` and `tests` steps as without the flag, then `runner`, which is `python scripts/inonu.py --version`. The JSON gains `ref` (the string as given) and the `runner` step. Exit 0 only when every step exits 0, 1 otherwise.
+- With `--ref`, a root below the top of its repository checks the matching directory of that commit.
+- Invalid input exits 2 with a generic message that holds no path: a root outside a git repository, a ref that does not resolve to a commit, a git failure or a 60-second git timeout, and an exported tree without `tests/`. The temporary directory is removed on every outcome, and the command makes no network request.
+- Without `--ref`, the steps, output keys and exit codes are unchanged.
+- `tests/test_check_ref.py` builds temporary git repositories and covers a complete commit, a module that was never committed, an uncommitted edit, a committed broken test, the invalid inputs, the removed export, a subdirectory root and the output without the flag.
+- Docs: a "Before you push" section in [docs/plugin.md](docs/plugin.md) (commit, then `python -m inonu_harness check --ref HEAD`), a README paragraph and the skill's `check` bullet.
+
+### Limits
+
+- The check covers the operating system where it runs only. It is not verified on other systems. The CI workflow is unchanged in this release (decision D1 in the v0.17.0 milestone), so a three-system CI run is deferred.
+- A pass shows that the commit is self-contained for its compile step, its unit tests and its runner. It does not show that the plugin installs, that a host loads the skill or agent, or that the code is correct.
+- The export holds the commit's blobs exactly as stored: `export-ignore`, `export-subst` and `core.autocrlf` do not apply, submodule entries are skipped and a symlink becomes a plain file holding its target text. All blobs are held in memory once. Uncommitted and ignored files are never read.
+- The 60-second limit covers git calls only. The compile and test steps have no time limit, as before.
+
+## 0.16.0 — 2026-10-26
+
+### Added
+
+- A read-only documentation lint: `python -m inonu_harness docs lint [--root PATH] [--max-bytes N] [--max-lines N]`. It prints one JSON object with `schema_version` 1, `status`, `files_checked` and `findings`, and writes no file. Exit codes: 0 for `pass`, 1 for `fail` (at least one finding), 2 for invalid input (a root that is not a directory, or a limit that is not positive).
+- Instruction-file rules for `AGENTS.md`, `AGENTS.override.md` and `CLAUDE.md` in the root: `instruction_file_too_large` (default 32768 bytes, the documented Codex project-doc default), `instruction_file_too_long` (default 200 lines), `import_missing` for an `@path` line whose target does not exist, and `file_unreadable` for a file that is not valid UTF-8.
+- Link rules for those instruction files, `README.md` and every `*.md` under `docs/`: `link_broken` and `link_escapes_root`. Fenced code blocks and inline code spans are skipped; scheme, fragment-only and absolute targets are not checked.
+- Each finding carries `rule`, `file` (root-relative), `line`, `detail` and a `remediation` sentence that says what to change. Findings are sorted by file, line and rule, and the output holds no absolute path, so the same tree gives byte-identical output.
+- An architecture test, `tests/test_architecture.py`, that runs in the unit suite and therefore in `check`. It fails when a module in `inonu_harness/` or `scripts/` imports anything that is neither standard library nor `inonu_harness`, when a module other than `cli.py`, `__main__.py` and the runner `scripts/inonu.py` imports `inonu_harness.cli` or `inonu_harness.__main__`, when any module (including subpackages) imports or runs code by name with `__import__`, `importlib.import_module`, `exec` or `eval`, or when `docs_lint.py` imports `cli`. The failure message names the file and what to change.
+
+### Limits
+
+- The lint checks links and size only. It does not check whether a document is true or current, and it does not detect absolute local paths.
+- Heading anchors are not verified. A trailing `#fragment` or `?query` is removed before the target file is checked.
+- The 200-line limit is a configurable starting point, not a documented limit. The 32768-byte limit is the documented Codex default.
+- Nested instruction files are not checked, and the link rules do not cover `CHANGELOG.md` or `skills/`.
+- Link matching is case-exact and reports backslash targets on every host, so a link that only works on Windows or macOS is a finding. Links that span lines, escaped brackets and indented (non-fenced) code are not modelled. Directory links are not followed; one that leaves the root is reported.
+- There is no documentation-gardening agent and no quality-score document. A stale claim passes the lint unless it breaks a link or size rule, and nothing opens a correction.
+- The architecture test checks imports only. It does not test behavior or any other structural rule.
+- The research source is one vendor's article (OpenAI), read in a browser pane and not independently evaluated. It describes one team's experience and does not measure how much each practice contributes; see [research-verify.md](docs/specs/milestones/v0.16.0/research-verify.md).
+
+## 0.15.0 — 2026-10-26
+
+### Added
+
+- An installable Claude Code plugin at the repository root: `.claude-plugin/plugin.json` (name `inonu-harness`, version `0.15.0`) and `.claude-plugin/marketplace.json`, with the repository as its own marketplace. Install with `/plugin marketplace add ori-inonu/inonu-harness` and `/plugin install inonu-harness@inonu-harness`.
+- The plugin carries the `inonu-harness` skill, the `inonu-worker` agent (`model: haiku`) and the standard-library runner `scripts/inonu.py` with the `inonu_harness` package.
+- The skill calls the runner as `python "${CLAUDE_PLUGIN_ROOT}/scripts/inonu.py"`. `scripts/configure_hosts.py` and `bundle apply` replace that token with the absolute runner command in the copies they write, so those copies contain no placeholder.
+- Structural tests in `tests/test_plugin.py` check the manifests, frontmatter and layout without the Claude CLI.
+- The reference is in [docs/plugin.md](docs/plugin.md).
+
+### Limits
+
+- The package was not run through `claude plugin validate`, and no live installation was tested. Run `claude plugin validate .` before relying on it.
+- The plugin needs Python 3.11+ reachable as `python`. The Claude docs do not name the Windows launcher; that is not verified.
+- The plugin starts no MCP server and no hook. MCP registration and the Stop hook stay in `bundle apply`, with preview, ledger and rollback.
+- Installed users stay on the cached copy until `version` changes.
+- The plugin docs namespace plugin components under the plugin name, so a plugin installed beside a `bundle apply` profile should not collide with it. This is not tested in a live session.
+- The plugin installs from committed files only: the manifests and every module and document the package needs must be committed and pushed before it can be installed from GitHub.
+- A `CLAUDE.md` at the plugin root is not loaded as context and `claude plugin validate` warns about it.
+- Passing the structural tests does not establish installation, reachability or agent quality. The plugin is not listed in any directory.
+
+## 0.14.0 — 2026-10-26
+
+### Added
+
+- A deterministic loop runner: `python -m inonu_harness loop run SPEC.json`. It runs the caller's `step` command once per iteration, then every check, and prints one JSON summary on stdout. Exit codes: 0 for `verified_done`, 1 for any other stop, 2 for invalid input (bad spec or unreadable file).
+- A strict JSON spec with `step`, `checks`, `limits`, `log` and an optional `cwd`. Duplicate keys, unknown keys and wrong types are invalid input. Commands are argv lists, run without a shell and with stdin closed.
+- Stop reasons `verified_done`, `verifier_error`, `wall_clock`, `max_iterations` and `stagnation`, applied in that precedence after each iteration. Iteration 0 runs every check before any step, so an already-passing project runs zero steps.
+- Four mandatory limits with no defaults: `max_iterations`, `iteration_timeout_seconds`, `total_timeout_seconds` and `stagnation_iterations`.
+- Runner-owned `passes`: each check's state comes only from its exit code. A check that passed earlier and fails later is recorded as a regression.
+- An append-only JSONL log with one object per iteration, flushed after each write. It holds ids, exit codes, timeout flags, hashes and decisions, and no argv, command output, environment or absolute paths.
+- Every command's whole process tree is killed when the command ends and on timeout, so nothing a step starts outlives it: on POSIX, the command's own session and process group with SIGKILL; on Windows, a kill-on-close Job Object (with `taskkill /T /F` as fallback).
+- The stagnation tree hash covers untracked file contents, handles a repository without a commit, excludes the loop's own log and treats a git failure as unknown, which never counts as stagnation. A command the spent budget never let start is recorded as `not_run` and is not counted as a regression. The printed summary is ASCII-escaped.
+- The reference is in [docs/loop.md](docs/loop.md).
+
+### Limits
+
+- The loop does not resume after an interruption. The log keeps the iterations written before it stopped.
+- The runner does no token, spend or model-usage accounting.
+- The limit values and the stagnation window are unvalidated starting points. No source gave a numeric threshold.
+- A passing run means only that every check exited 0 in the same iteration. The runner proves nothing about agent quality or whether the checks test the right thing.
+- The `step` command is the caller's choice and may call a model or a paid service, so it may cost money.
+- The log is not tamper-proof: a step runs with the caller's permissions and can edit it.
+- No host hook is generated or installed. The loop does not write a Claude Code Stop hook or any other host configuration.
+- Research gaps for the hook and loop designs remain open (the OpenAI primary page, the SubagentStop and `onFailure` text, and whether `stop_hook_active` resets); see [research-verify.md](docs/specs/milestones/v0.14.0/research-verify.md).
+
+## 0.13.0 — 2026-10-26
+
+### Added
+
+- `baseline compare` takes an opt-in regression gate: `python -m inonu_harness baseline compare BEFORE AFTER --max-regression R`. `R` is a finite number of at least 0 (`0.10` allows a 10% increase). A negative, NaN or infinite `R` exits 2 and prints nothing to stdout.
+- With the flag, the output is the existing comparison plus a `gate` object with `max_regression`, `status`, `regressions` and `skipped`. Exit codes: 0 for `pass`, 1 for `fail`, 2 for `incomparable` (task or config differ, or a judged metric changed its measurement source and no regression is certain). A certain regression always wins and exits 1. Unreadable files, an unsupported schema, duplicate JSON keys and an invalid `R` are invalid input and exit 2 without a `gate` object. Without the flag, the output and exit code are unchanged.
+- Judged metrics, only when both runs observed them: acceptance criteria that passed before and are missing or failed after (named `acceptance:<id>`, no tolerance); `failures`, `blocks` and `tool_calls` by list length; `input_tokens`, `output_tokens` and `cost_usd` by value. A value that grows from 0 to a positive number fails. The comparison uses exact decimal arithmetic, so a rise of exactly `R` passes and very large integers compare exactly.
+- `elapsed_seconds`, `recoveries`, `runtime`, `model` and `component_versions` are not judged. Metrics whose values are unavailable (for example tokens or cost `null`) are listed under `skipped` with their reason and never filled in.
+- The standalone entry point `python -m inonu_harness.baseline compare` takes the same flag. Both entry points call the pure function `gate_comparison()` in `inonu_harness/baseline.py`.
+
+### Limits
+
+- The gate compares two saved local measurements. It does not establish agent quality or productivity, and a lower token count does not offset a lower acceptance outcome.
+- Skipped metrics never count as a pass or a regression, except that a judged metric whose measurement source changed makes the gate `incomparable` rather than `pass`.
+- Duplicate JSON keys are rejected only when the flag is given, so reading without the gate is unchanged.
+
+## 0.12.0 — 2026-10-26
+
+### Added
+
+- `bundle apply` and `bundle remove`: `python -m inonu_harness bundle apply [--host codex|claude|both] [--home PATH] [--with-stop-hook] [--apply]` and `bundle remove` with the same flags. Without `--apply` the command is a preview and writes nothing. Output is one JSON object with `mode`, `action`, `version` and `items`; it prints no file contents, settings values, environment values or absolute personal paths.
+- Apply covers the user skill profile (both hosts), the Claude worker agent, complementary MCP server entries and, only with `--with-stop-hook`, the Stop hook. The stop hook is opt-in because it would run the Inonu suite on every Stop in every project.
+- Preflight runs before any write. A conflict prints the report, writes nothing and exits 2. Applying twice reports `unchanged` the second time.
+- An ownership ledger records the hash of each item Inonu wrote, plus what the run created (files, directories, JSON containers). Before a write, the original file is backed up.
+- A write is all-or-nothing per run: if a file changes mid-run, a write fails or the process is interrupted, the files already written (backups included) are restored and the report says `failed` or `conflict` with `rollback: complete` (or `incomplete`). A file edited by someone else after the run wrote it is left alone and the rollback is reported incomplete.
+- A conflict found during preflight is reported as `would_install`/`would_update`/`would_remove`; no item claims a write that did not happen.
+- `bundle remove` reverses only items whose hash matches the ledger. A user-modified item, or a Codex block whose line endings were changed, is reported as `conflict` and kept. Remove deletes only the files, directories and empty containers that apply created, so files and containers that existed before (even empty ones) stay. JSON files are rewritten from their parsed content, so remove restores the content but not the original formatting; the pre-apply file is kept in `~/.inonu-harness/backups`, which remove does not delete.
+- MCP launchers are found only through absolute `PATH` entries. A file in the current directory or a relative `PATH` entry is never recorded, and a Windows `.cmd` launcher is written with its absolute path.
+- JSON files containing non-finite numbers (`NaN`, `Infinity`, `1e400`), duplicate keys or text that cannot be written back as UTF-8 are treated as a conflict instead of being rewritten. A regular file where a directory belongs is also a conflict.
+- `tool_missing` is reported when a required launcher is not found; Inonu does not install it.
+- Existing user MCP entries with the same id are never overwritten.
+- `bundle status` keeps working and reflects applied items.
+
+### Limits
+
+- A host that writes its own configuration at the same moment can lose an edit inside the short window between re-reading a file and replacing it. Rollback restores what this run wrote and does not undo an outside edit made after that.
+- Directories created by a run that fails midway are removed only if they are empty and listed as created by the bundle.
+- `configured` means the host file contains the key. It does not prove that the server is reachable or that a hook runs.
+- Apply and remove do not install the tools themselves (CodeGraph, Headroom, Node).
+- The write of host configuration is authorized by the owner; the record is in `docs/specs/milestones/v0.11.0/decisions.md` (D2).
+
+## 0.11.0 — 2026-10-26
+
+### Added
+
+- A read-only `bundle status`: `python -m inonu_harness bundle status [--host codex|claude|both] [--home PATH]` reports the state of each `bundle plan` item (`skill`, `worker-agent`, `stop-hook`, `mcp`) plus a `summary` count per state. It reuses the plan and the v0.9 skill preflight, reads host files without writing them, and never prints file contents, settings values, environment values or absolute personal paths.
+
+### Limits
+
+- `bundle status` is read-only. `configured` and `present` describe what a host file contains; they do not prove that an MCP server is reachable or that a hook runs. `accessibility` stays `unknown`.
+- Install and remove commands for hooks, MCP registrations and agent files move to v0.12.0 and still require explicit owner authorization.
+
+## 0.10.0 — 2026-10-26
+
+### Added
+
+- A deterministic `check` gate: `python -m inonu_harness check [--root PATH]` runs `compileall` and the unit tests for the selected checkout, prints one JSON summary to stdout, sends child output to stderr, and exits 0 only when every step passes.
+- A read-only `bundle plan`: `python -m inonu_harness bundle plan [--host codex|claude|both] [--home PATH]` lists the skill status (reusing the v0.9 host profile logic), a Claude worker agent source, a stop-hook settings snippet that would run `check`, and complementary MCP server entries. Every non-skill item reports `"applied": false`.
+- A worker agent source at `agents/inonu-worker.md` with `model: haiku`, bounded to one ticket, without nested delegation or Jev calls, and required to run `check` before reporting done.
+- An `inonu` console script declared in `pyproject.toml` that points to `inonu_harness.cli:main`. No dependency was added.
+- Research and decision records for this slice are in `docs/specs/milestones/v0.10.0/research.md` and `docs/specs/milestones/v0.10.0/decisions.md`.
+
+### Limits
+
+- `bundle plan` applies nothing and writes nothing. Installing the hook, MCP registrations or the worker agent requires a later milestone with explicit owner authorization.
+- `check` verifies only this checkout layout (`inonu_harness`, `scripts` and `tests`). A passing result is deterministic evidence for those steps, not proof of semantic correctness or of host behavior.
+- Haiku adequacy for the worker agent has not been evaluated; the `model: haiku` setting is a configuration choice, not a measured result.
 
 ## 0.9.0 — 2026-10-26
 

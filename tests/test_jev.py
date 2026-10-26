@@ -74,7 +74,7 @@ class JevAdapterTests(unittest.TestCase):
         self.assertNotIn("extra", transport.calls[0][1]["spec"])
         for dirty in (
             spec(facts={"credential": "api_key=abc"}),
-            spec(goal="Use sk-abcdefghijklmnopqrstuvwxyz123456"),
+            spec(goal="Use sk-" + "abcdefghijklmnopqrstuvwxyz123456"),
         ):
             with self.subTest(dirty=dirty):
                 with self.assertRaises(ValueError):
