@@ -11,6 +11,10 @@ This changelog prepares release 0.9.0. Earlier entries record repository milesto
 - Portable profile commands that quote the runner path for the host shell and point skill documentation links at the checkout that supplied the profile.
 - No runtime dependency was added.
 
+### Fixed
+
+- POSIX substitution-test instrumentation now preserves the wrapped `os.open` descriptor-relative capability. This lets Linux CI exercise the intended file substitutions instead of returning early; production evidence-reading rules are unchanged.
+
 ### Limits
 
 - Profile application proves only that files were installed or updated. It does not prove a host discovered the skill, loaded it in a session, or successfully used every command. A local Claude Desktop Code session uses local skills; Chat and Cowork use account skill settings instead.

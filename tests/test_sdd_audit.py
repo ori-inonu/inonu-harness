@@ -553,6 +553,8 @@ class SddAuditTests(unittest.TestCase):
         self.assertEqual([], path_opens)
 
     def _assert_posix_substitution_rejected(self, manifest: dict, *, replacement_kind: str) -> None:
+        if os.open not in os.supports_dir_fd:
+            self.skipTest("descriptor-relative opens are unavailable")
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
             root = base / "root"
@@ -597,7 +599,12 @@ class SddAuditTests(unittest.TestCase):
                 return original_os_open(path, flags, mode, dir_fd=dir_fd)
 
             try:
-                with patch.object(Path, "open", intercepted_path_open), patch.object(os, "open", intercepted_os_open):
+                # The wrapper retains the original open's descriptor-relative capability.
+                with (
+                    patch.object(Path, "open", intercepted_path_open),
+                    patch.object(os, "open", intercepted_os_open),
+                    patch.object(os, "supports_dir_fd", os.supports_dir_fd | {intercepted_os_open}),
+                ):
                     report = audit_manifest(manifest, root)
             except (OSError, NotImplementedError) as exc:
                 self.skipTest(f"temporary symlink is unavailable: {type(exc).__name__}")
