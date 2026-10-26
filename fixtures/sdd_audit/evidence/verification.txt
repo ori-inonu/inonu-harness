@@ -1,0 +1,1 @@
+v0.8 synthetic verification output: immutable fixture bytes

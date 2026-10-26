@@ -1,0 +1,61 @@
+{
+  "fixture_schema_version": 1,
+  "fixture_id": "sdd-context-consumer-task-v1",
+  "task_id": "sdd.context-consumer",
+  "config_id": "sdd-context-cli-consumer-v1",
+  "runtime": null,
+  "model": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "cost_usd": null,
+  "tool_calls": [],
+  "failures": [],
+  "blocks": [],
+  "recoveries": [],
+  "acceptance": [],
+  "acceptance_ids": [
+    "selected-context-present",
+    "task-rails-delivered",
+    "recommendation-remains-unauthorized"
+  ],
+  "task": {
+    "prompt": "Add the explicit, read-only SDD context CLI subcommand to the Inonu Harness. Keep it opt-in, require explicit decision IDs, preserve the existing eight-stage SDD flow, and do not authorize or call JEV.",
+    "decision": {
+      "id": "m2-cli-consumer",
+      "question": "How should this task consume persistent decision context?",
+      "alternatives": [
+        {"id": "cli-json", "label": "Manual CLI JSON"},
+        {"id": "automatic-runtime", "label": "Automatic runtime injection"}
+      ],
+      "constraints": [
+        "manual-opt-in",
+        "explicit-ids",
+        "read-only-database",
+        "preserve-eight-stage-flow",
+        "no-live-jev"
+      ],
+      "required_criteria": [
+        "manual-opt-in",
+        "local-fixture-only",
+        "same-task-comparison",
+        "no-agent-performance-claim"
+      ],
+      "dependencies": [],
+      "evidence": [
+        {
+          "source": "milestone-spec",
+          "reference": "docs/specs/milestones/v0.3.0/spec.md#M2-R01",
+          "criterion_id": "manual-opt-in",
+          "version": "1",
+          "provenance": "fixture evidence detail must remain outside the projection"
+        }
+      ],
+      "recommendation": {
+        "alternative_id": "cli-json",
+        "source": "local-fixture",
+        "version": "m2-fixture-1",
+        "provenance": "fixture recommendation only"
+      }
+    }
+  }
+}

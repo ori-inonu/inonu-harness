@@ -1,24 +1,29 @@
-# Arquitetura em estudo
+# Arquitetura local implementada
 
-## Hipótese central
+O Inonu complementa o runtime Codex e o fluxo SDD existente com diagnóstico, avaliação por fixtures, um Decision Graph persistente, consumo manual de contexto e auditoria de artefatos. Os componentes locais seguem a sequência SDD existente.
 
-O Inonu deve aproveitar capacidades específicas por meio de contratos pequenos, sem acoplar o fluxo SDD a um runtime ou reconstruir ferramentas antes de demonstrar a necessidade. A proposta principal é um Decision Graph Engine; ele ainda não está implementado.
+## Componentes locais
 
-## Componentes propostos
-
-| Componente | Entrada e saída |
+| Componente | Comportamento implementado |
 | --- | --- |
-| SDD | Requisitos, fases, tarefas e aceite |
-| Context & Evidence Engine | Referências para símbolos, dependências, diffs e conteúdo recuperável |
-| Decision Graph | Nós persistentes com opções, restrições, evidências, dependências e revisões |
-| JEV | Recomendação tipada para opções já delimitadas |
-| Decision Validator | Regras determinísticas, evidência suficiente, conflitos e gates de autorização |
-| Runtime | Execução das tarefas com contratos portáveis |
-| Verification Engine | Testes, compilação, avaliação e revisão independente |
+| Doctor e baseline (M0) | `doctor` emite inventário sanitizado e usa `unknown` quando não pode verificar um fato. `baseline` executa fixtures offline e compara resultados com proveniência. |
+| Auditoria de artefatos SDD (v0.8) | `sdd audit` valida manifestos v1, vínculos explícitos e hashes de evidências locais; é somente leitura e opcional. |
+| Decision Graph (M0) | Armazena decisões em SQLite, com revisões, histórico, evidências, dependências e idempotência. Recomendações e autorizações são campos distintos. |
+| Adaptador JEV e gate (M0) | `JevAdapter` valida escolhas delimitadas e chama `consensus_plan` e `consensus_run` pelo transporte MCP injetado; testes usam o mock. `SddDecisionGate` é opcional e começa desativado. |
+| Contexto SDD (M1–M2) | `SddDecisionContextAdapter` expõe uma projeção allowlisted, somente de leitura, para IDs explícitos escolhidos pelo chamador. A CLI `decisions context` lê o banco existente em modo read-only. |
+| Pacote manual (M4) | `decisions packet` combina um arquivo de tarefa estritamente validado com contexto dos IDs explícitos. A leitura é read-only e o pacote é revisado e anexado manualmente pelo chamador. Chaves JSON duplicadas no arquivo de tarefa são rejeitadas. |
 
-Uma decisão pode guardar ID, pergunta, opções, referências de contexto, restrições, decisão-pai, revisão, status e resultado de validação. Guarde evidências e decisões explícitas, não raciocínio interno oculto do modelo.
+O registro de autorização do grafo exige evidência para cada critério requerido. Uma recomendação JEV não altera esse estado, um recibo JEV não concede autoridade, e registrar autorização local não executa nem substitui a autorização necessária para uma operação externa.
 
-Quando uma evidência nova invalida uma premissa, marque a decisão como revisável e localize as decisões dependentes. Preserve o histórico e o motivo da revisão.
+O inventário de integrações registra que chamadas MCP do Jev funcionaram no chat coordenador em 2026-10-24. Esse fato descreve somente aquela sessão/host; não prova disponibilidade em outro cliente nem fornece transporte JEV portátil. A CLI local não configura transporte MCP ao vivo.
+
+O M3 é um protocolo documental de avaliação exploratória. O piloto não foi executado porque não havia evidência de isolamento text-only verificável neste host.
+
+A auditoria v0.8 não altera a sequência SDD de oito etapas e não executa verificações nem serviços. Seu relatório cobre apenas os vínculos e bytes declarados: hash detecta drift, mas não autentica uma execução nem valida significado de Markdown, requisitos omitidos ou conteúdo semântico. Os manifestos de demonstração são casos sintéticos.
+
+## Limites e trabalho futuro
+
+O adaptador de contexto não é um mecanismo geral de recuperação de símbolos, diffs ou conteúdo. O inventário de ambiente, o grafo e a verificação são componentes locais separados; não há um motor geral de contexto/evidências, runtime próprio ou serviço remoto implementado neste marco. Codex continua sendo o ambiente atual; DeepSeek Harness e Pi permanecem candidatos sem escolha aceita.
 
 ## Quando usar cada mecanismo
 
@@ -26,17 +31,17 @@ Quando uma evidência nova invalida uma premissa, marque a decisão como revisá
 | --- | --- |
 | Regra determinística | Código |
 | Escolha curta entre opções conhecidas | JEV |
-| Várias avaliações independentes | Uma chamada JEV |
-| Decisões dependentes ou ramificadas | Decision Graph e modelo de raciocínio; JEV quando agregar uma comparação delimitada |
+| Várias avaliações independentes | Avaliar pelo fluxo JEV somente quando o contrato disponível aceitar essas avaliações |
+| Decisões dependentes ou ramificadas | Decision Graph para persistência e dependências; JEV somente para comparação delimitada |
 | Falta de evidência | Recuperação de evidências |
 | Ação fora da autoridade concedida | Aprovação humana |
 | Testes contradizem uma decisão | Reabrir o nó e investigar |
 
-Não invoque modelos extras para uma condição que um if determinístico resolve com mais confiabilidade.
+Não invoque modelos extras para uma condição que um if determinístico resolve com mais confiabilidade. Recomendações JEV são consultivas: não concedem autorização nem provam que uma tarefa terminou.
 
 ## Runtimes candidatos
 
-Codex é o ambiente atual. DeepSeek Harness e Pi são candidatos de avaliação, não decisões aceitas. A hipótese da conversa é testar DeepSeek Harness primeiro e manter Pi como comparador minimalista. A escolha deve esperar uma execução comparável do mesmo fluxo SDD, modelo, orçamento e conjunto de tarefas. Antes de permitir autoalterações do harness, use isolamento externo compatível com cada runtime.
+Codex é o ambiente atual. DeepSeek Harness e Pi são candidatos de avaliação, não decisões aceitas; nenhum deles tem prioridade definida. Uma comparação deve usar o mesmo fluxo SDD, modelo, orçamento e conjunto de tarefas. Antes de permitir autoalterações do harness, use isolamento externo compatível com cada runtime.
 
 ## Engenharia reversa
 

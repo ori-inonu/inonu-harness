@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "description": "Declarative integration intent. This file does not assert that an integration is installed, configured, or operational on a host.",
+  "observations": {
+    "populated_by": "inonu_harness.doctor.collect_environment",
+    "runtime_state_fields": ["installed", "configured", "operational", "documented", "unknown"],
+    "host_specific": true,
+    "committed_host_state": false
+  },
+  "integrations": [
+    {
+      "id": "jev",
+      "intent": {
+        "purpose": "Obtain bounded, advisory recommendations for engineering decisions.",
+        "input_contract": "A sanitized decision specification with a goal, facts, constraints, bounded options, and unknowns; a host MCP transport is required.",
+        "output_contract": "A recommendation tied to a supplied option, with available version and provenance metadata; it never grants authorization.",
+        "candidate_function": "Compare bounded alternatives and record recommendation provenance for a pending decision.",
+        "dependencies": ["Codex host MCP transport", "configured jev-sdd server", "existing credential provider kept outside the report"],
+        "overlap": ["human decision review", "Decision Graph recommendation records"],
+        "license": {"status": "unknown", "value": null, "provenance": "not established by the doctor"},
+        "test": "Use a deterministic mock transport to check allowed options, invalid responses, timeout, and the absence of authorization changes.",
+        "implementation_trigger": "A repeatable decision task benefits from a bounded recommendation and the real transport contract is confirmed."
+      }
+    },
+    {
+      "id": "rtk",
+      "intent": {
+        "purpose": "Reduce and format supported terminal command output.",
+        "input_contract": "A supported local command passed through an RTK CLI or configured hook.",
+        "output_contract": "A compacted terminal result; exact behavior depends on the installed RTK component.",
+        "candidate_function": "Keep routine command output concise while retaining a way to retrieve full output when needed.",
+        "dependencies": ["RTK CLI for CLI use", "shell and hook configuration for automatic routing"],
+        "overlap": ["agent-side summarization", "shell aliases or other output filters"],
+        "license": {"status": "known", "value": "Apache-2.0 CLI; BUSL-1.1 engine/proxy", "provenance": "verified package metadata; components have distinct licenses"},
+        "test": "Compare compacted output against the original on representative successful and failed commands, including retrieval of full output.",
+        "implementation_trigger": "The runtime lacks required output compaction, and a measured fixture shows a material gap."
+      }
+    },
+    {
+      "id": "headroom",
+      "intent": {
+        "purpose": "Provide optional on-demand compression and retrieval for long context sources.",
+        "input_contract": "A selected document, log, or JSON payload supplied to an available Headroom interface.",
+        "output_contract": "A compressed representation or retrieved source content, according to the selected tool contract.",
+        "candidate_function": "Reduce repeated retrieval cost for unusually long non-terminal material while preserving source access.",
+        "dependencies": ["Headroom package or MCP tools", "the caller selecting a source"],
+        "overlap": ["ordinary file search", "RTK terminal-output compaction", "model context compression"],
+        "license": {"status": "known", "value": "Apache-2.0", "provenance": "verified package metadata"},
+        "test": "Use a local long fixture and compare retrieved facts with the source; do not infer compression savings without measurement.",
+        "implementation_trigger": "Repeated long-document retrieval is a measured bottleneck that the runtime does not already handle."
+      }
+    },
+    {
+      "id": "codegraph",
+      "intent": {
+        "purpose": "Navigate symbols and structural relationships in a code repository.",
+        "input_contract": "A local repository available to the CodeGraph CLI or MCP tools.",
+        "output_contract": "Repository orientation, symbol, dependency, duplicate, or impact information supported by the installed version.",
+        "candidate_function": "Improve targeted code navigation and impact analysis beyond plain text search.",
+        "dependencies": ["CodeGraph package", "local repository index for repository-specific queries", "optional MCP registration"],
+        "overlap": ["ripgrep", "language server navigation", "compiler or test dependency graphs"],
+        "license": {"status": "unknown", "value": null, "upstream_value": "MIT", "provenance": "official upstream repository; installed distribution mapping not verified"},
+        "test": "Run a bounded symbol or dependency query on a deterministic local fixture and compare results with known references.",
+        "implementation_trigger": "Structural navigation provides a repeatable benefit that plain search and language tooling cannot provide."
+      }
+    },
+    {
+      "id": "ponytail",
+      "intent": {
+        "purpose": "Guide coding work toward small, correct, reuse-first changes with necessary checks.",
+        "input_contract": "A coding task and repository context read by the agent skill system.",
+        "output_contract": "Agent instructions; no independent runtime service or decision authority is implied.",
+        "candidate_function": "Keep implementation scope and review effort proportional to the requested change.",
+        "dependencies": ["Codex skill discovery and loading"],
+        "overlap": ["repository instructions", "code review and implementation skills"],
+        "license": {"status": "known", "value": "MIT skill", "provenance": "skill frontmatter"},
+        "test": "Review a fixed task against the skill guidance and confirm that required validation and security checks remain.",
+        "implementation_trigger": "Do not create a replacement; revise only if repeated task evidence identifies a concrete guidance gap."
+      }
+    },
+    {
+      "id": "sequential_thinking",
+      "intent": {
+        "purpose": "Offer optional structured branching or revision while working through multi-step questions.",
+        "input_contract": "A bounded question and sequential thought steps sent through an MCP interface, when available.",
+        "output_contract": "Intermediate or final structured responses as exposed by the specific MCP server; not an authorization signal.",
+        "candidate_function": "Inform decision revision or branching only where an observable task benefits from it.",
+        "dependencies": ["Sequential Thinking server implementation", "Codex host MCP transport"],
+        "overlap": ["JEV decision rounds", "agent planning", "Decision Graph dependency links"],
+        "license": {"status": "known", "value": "MIT", "provenance": "verified upstream metadata"},
+        "test": "Compare a deterministic branching fixture with and without the tool; verify that no hidden model reasoning is persisted.",
+        "implementation_trigger": "A measured task requires explicit branching that existing planning and decision records do not support."
+      }
+    }
+  ]
+}

@@ -2,25 +2,23 @@
 
 ## Confirmado
 
-- O Inonu começa pelo fluxo SDD existente; o JEV recebe escolhas delimitadas e retorna recomendações.
+- O Inonu complementa o fluxo SDD existente; as oito etapas documentadas em `docs/sdd-workflow.md` continuam sendo o caminho normal.
 - Requisitos, evidências, decisões e verificações precisam ser preservados ao longo da execução.
 - O repositório será público e não incluirá credenciais, caminhos pessoais, índices ou dados locais.
-- CodeGraph 3.0.1 foi instalado, a integração MCP do Codex foi registrada e o índice local deste repositório foi inicializado.
-- O índice .codegraph/ e o cache não entram no Git.
+- O Decision Graph SQLite já está implementado, incluindo revisões, histórico, evidências, dependências e idempotência; recomendações e autorizações permanecem separadas.
+- Os adaptadores de contexto SDD são opt-in e somente de leitura. `decisions context` e `decisions packet` usam IDs explícitos; o segundo também valida o arquivo de tarefa e rejeita chaves JSON duplicadas.
+- O gate SDD é desativado por padrão. Recomendações JEV são consultivas, não concedem autoridade e não executam operações externas.
 - Nenhum código-fonte de outra ferramenta foi copiado para este repositório.
 
-## Hipóteses para testar
+## Observações históricas do host M0 (2026-10-24)
 
-- Um Decision Graph pode persistir decisões e dependências e reabrir apenas o trabalho invalidado por evidência nova.
-- DeepSeek Harness é um primeiro runtime experimental; Pi é um comparador de menor superfície. Nenhum está escolhido.
-- CodeGraph, RTK, Headroom e Ponytail podem operar em camadas separadas sem reduzir a qualidade do SDD.
+- `docs/integrations.md` registra chamadas Jev MCP funcionando no chat coordenador e CodeGraph MCP `orient` funcionando nessa mesma sessão. Isso não comprova disponibilidade em outros chats, clientes ou na CLI portátil.
+- Naquele host, CodeGraph CLI 3.0.1 estava presente e um índice local foi inicializado. São fatos históricos daquela observação, não afirmações de disponibilidade atual ou universal.
+- A CLI portátil do Inonu não implementa/configura transporte JEV ao vivo. O adaptador Python aceita um transporte injetado; o mock é a opção determinística local.
 
-## Pendências
+## Hipóteses e decisões ainda abertas
 
-- Recarregar o Codex para carregar as ferramentas MCP recém-registradas.
-- Confirmar as variáveis e opções válidas de Headroom na versão realmente instalada.
-- Confirmar o nome de ferramenta MCP do CodeGraph antes de usar HEADROOM_PROTECT_TOOL_RESULTS.
-- Ativar RTK apenas em hosts onde as chamadas passam pelo matcher Bash.
-- Definir o esquema mínimo e os gatilhos para revisar decisões dependentes.
-- Medir a matriz de ferramentas e a comparação entre runtimes com tarefas idênticas.
+- DeepSeek Harness e Pi permanecem candidatos de avaliação; nenhum runtime alternativo está escolhido.
+- O M3 define um piloto exploratório, mas ele não foi executado neste host porque não há evidência de isolamento text-only verificável. Uma execução futura depende de comprovar esse isolamento.
+- Avaliar recuperação geral de contexto ou integrações adicionais somente quando houver um caso mensurável; o adaptador atual cobre apenas decisões explicitamente selecionadas.
 - Escolher uma licença para o repositório. Até essa decisão, o repo permanece público sem declarar licença de reutilização.

@@ -1,0 +1,6 @@
+[project]
+name = "inonu-harness"
+version = "0.9.0"
+description = "Local-first diagnostics, deterministic baselines, and decision history"
+requires-python = ">=3.11"
+dependencies = []
