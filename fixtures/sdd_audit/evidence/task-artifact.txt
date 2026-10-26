@@ -1,0 +1,1 @@
+v0.8 synthetic completed task artifact: immutable fixture bytes

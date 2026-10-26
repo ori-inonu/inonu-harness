@@ -1,0 +1,2 @@
+fixtures/sdd_audit/evidence/** -text
+docs/specs/milestones/v0.8.0/** text eol=lf

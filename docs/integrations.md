@@ -10,7 +10,7 @@ This page records the evidence gathered for the M0 implementation host on 2026-1
 | Jev | `jev-sdd` MCP calls worked in the coordinator chat; no standalone `jev-sdd` command was found | Local CLI doctor can see registration, not whether another session loaded it. Transport portability is unverified. |
 | RTK | CLI `1.0.1` present; a global hook reference targets Bash | This session used PowerShell; the hook did not run here. Installed does not mean operational. |
 | Headroom | `0.41.0` and MCP tools were available in the coordinator chat | The local proxy was unreachable. CLI doctor cannot assert active MCP reachability. |
-| CodeGraph | CLI `3.0.1` present; MCP `orient` worked in the coordinator chat; a local index exists | MCP availability is specific to that session. The doctor reports it as `unknown`. |
+| CodeGraph | CLI `3.0.1` present; MCP `orient` worked in the coordinator chat on 2026-10-24; on 2026-10-25, `codegraph doctor` reported the CLI/native addon available and `codegraph orient --root . --budget small` succeeded | The MCP `orient` call in the 2026-10-25 session did not return within 75 seconds and was stopped, so MCP reachability is not confirmed for this session. The doctor reports MCP as `unknown`; the CLI is usable for local navigation and impact queries. |
 | Ponytail | Plugin package `5.3.2` and its skill are present; the skill was active in the implementation conversation | This is agent guidance, not a separate service or decision authority. |
 | Matt Pocock SDD skills | Local adapters and an upstream copy were present | No release or Git revision metadata was available, so no version is asserted. |
 | Sequential Thinking | Not present in the Codex MCP registry | Installation and operational state remain unknown. It is not a core dependency. |
@@ -54,9 +54,9 @@ The inventory intentionally omits local configuration values, hook commands, cre
 - **Problem:** navigate symbols, dependency relationships, duplicates, and change impact beyond text search.
 - **Input/output contract:** a local repository/index is queried through its CLI or MCP; supported results include repository orientation, symbol or dependency information, and impact evidence.
 - **Inonu candidate:** target navigation and impact questions, then link the relevant source evidence to a decision or review.
-- **Dependencies and overlap:** CodeGraph CLI/MCP and a local repository index; overlaps `rg`, language-server navigation, and test/compiler dependency graphs. The local CLI version was `3.0.1`; MCP access was observed only in the coordinator chat. The exact local package-to-upstream mapping was not proven by the doctor.
-- **License:** MIT for the [CodeGraph repository](https://github.com/codegraph-ai/CodeGraph); confirm the installed distribution's source before relying on that license for the local binary.
-- **Test:** run one bounded symbol/dependency query on a deterministic local fixture and compare it to known references.
+- **Dependencies and overlap:** The installed CLI metadata identifies `@lzehrung/codegraph` version `3.0.1`, with repository `https://github.com/lzehrung/codegraph` and license `MIT`. CodeGraph overlaps `rg`, language-server navigation, and test/compiler dependency graphs. The CLI worked for local queries on 2026-10-25. MCP access was observed in the coordinator chat on 2026-10-24, but reachability was not confirmed in the 2026-10-25 session.
+- **License:** The installed package metadata declares MIT, matching the [official repository license](https://github.com/lzehrung/codegraph/blob/main/LICENSE). The Environment Doctor reports `MIT` with source `local_package_manifest` only when the global npm package identity, version, license, repository, and executable bin directory match the observed CLI. Standalone installs, forks, or unverifiable metadata remain `unknown`; this host-specific result does not establish what another installation uses or whether MCP is available in the current session.
+- **Test:** the proposed isolated-fixture check remains pending. On 2026-10-25, `codegraph path inonu_harness/cli.py inonu_harness/jev.py --root . --cache off --json` returned `cli.py → sdd_adapter.py → jev.py`; a direct `rg` search for a `jev` import in `cli.py` found no match. This is one static dependency-path result that found an indirect relationship beyond the direct text search. It does not prove runtime behavior, dynamic-import coverage, or general accuracy and impact coverage.
 - **Implement it ourselves when:** a measured navigation need persists and the installed CodeGraph interface does not provide the required evidence.
 
 ### Ponytail
@@ -83,7 +83,7 @@ The inventory intentionally omits local configuration values, hook commands, cre
 
 - [RTK license overview](https://github.com/rtk-ai/rtk#license), [RTK engine license](https://github.com/rtk-ai/rtk/blob/develop/engine/LICENSE)
 - [Headroom repository and license](https://github.com/headroomlabs-ai/headroom)
-- [CodeGraph repository and license](https://github.com/codegraph-ai/CodeGraph)
+- [CodeGraph repository and README](https://github.com/lzehrung/codegraph), [agent workflow guidance](https://github.com/lzehrung/codegraph/blob/main/docs/agent-workflows.md), [MIT license](https://github.com/lzehrung/codegraph/blob/main/LICENSE)
 - [Sequential Thinking server documentation and license](https://github.com/modelcontextprotocol/servers/blob/main/src/sequentialthinking/README.md)
 - [Ponytail upstream repository](https://github.com/DietrichGebert/ponytail)
 - [GitHub Actions checkout](https://github.com/actions/checkout), [setup-python](https://github.com/actions/setup-python)

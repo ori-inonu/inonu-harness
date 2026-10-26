@@ -86,6 +86,20 @@ Quando o JEV estiver indisponível, registre sem-jev, faça somente a escolha re
 | Limite de autorização ou ação protegida | Bloquear essa ação |
 | Teste contradiz uma decisão | Reabrir a decisão e revisar dependentes |
 
+## Escolha de ferramentas
+
+Escolha o recurso pela pergunta. Consulte o [inventário de integrações](integrations.md) para contratos detalhados e disponibilidade observada por host.
+
+| Necessidade | Use | Limite ou fallback |
+| --- | --- | --- |
+| Encontrar texto exato, logs ou chaves de configuração; ler um arquivo conhecido | `rg` e leitura direta | Use um comando ou teste determinístico para provar comportamento. |
+| Encontrar símbolos, chamadas, dependências ou impacto entre arquivos | CodeGraph MCP quando responsivo; CLI local quando instalada | Se ambos faltarem, use busca textual e leitura direta. Resultados do grafo não provam execução. |
+| Reduzir saída de um comando | RTK em rotas suportadas | Se a saída compactada omitir detalhe necessário, repita com `rtk bypass <command>`; não presuma que hooks ou proxy estejam ativos. |
+| Analisar documento, log ou JSON excepcionalmente longo fora do terminal | Headroom sob demanda com `headroom_compress` | Recupere o trecho original com `headroom_retrieve` ou releia a fonte antes de confirmar fatos. |
+| Escolher entre alternativas de engenharia delimitadas | JEV pelo protocolo em [Decisões delimitadas](#decisões-delimitadas) | A recomendação é consultiva; evidência determinística e autorização humana mantêm autoridade. |
+| Anexar decisões persistentes a uma tarefa | Decision Graph `context` ou `packet` com IDs explícitos, conforme [Contexto de decisões opt-in](#contexto-de-decisões-opt-in) | A leitura é opt-in e somente de leitura; revise o pacote manualmente. Não há descoberta nem injeção automática. |
+| Implementar uma mudança delimitada | Ponytail e reutilização do que já existe | Reduza o escopo sem remover critérios de aceite, segurança ou verificações necessárias. |
+
 ## Tarefas paralelas
 
 Para trabalho SDD paralelo, mantenha um coordenador e use os agentes nativos do host. Cada agente recebe uma tarefa finita, um conjunto exclusivo de arquivos e critérios de aceite claros. Apenas o coordenador faz chamadas pagas ao JEV, resolve conflitos e verifica a convergência. Espere os agentes terminarem e valide as evidências reais antes de fechar tarefas.
@@ -93,3 +107,13 @@ Para trabalho SDD paralelo, mantenha um coordenador e use os agentes nativos do 
 ## Limites
 
 Não peça ao operador decisões rotineiras em uma execução autônoma; transforme-as em escolhas delimitadas para JEV quando a evidência existir. Preserve para aprovação humana qualquer ação sobre dinheiro real, carteiras, credenciais, autenticação, limites de risco, migrações de dados/esquema, billing, serviços pagos ou mudanças Git destrutivas. Registre o bloqueio e avance as tarefas independentes.
+
+## Auditoria local opcional de artefatos
+
+Use `python -m inonu_harness sdd audit MANIFEST [--root ROOT]` quando quiser conferir os vínculos declarados de um marco. O comando emite JSON: código de saída 0 indica contrato aprovado, 1 indica achados e 2 indica entrada inválida. Sem `--root`, caminhos de evidência são resolvidos a partir do diretório do manifesto. Os exemplos sintéticos compartilham evidências em `fixtures/sdd_audit/evidence`, então use:
+
+```powershell
+python -m inonu_harness sdd audit fixtures/sdd_audit/clear-change/manifest.json --root fixtures/sdd_audit
+```
+
+Essa auditoria é uma checagem opcional durante a revisão de artefatos, sem alterar as oito etapas acima. Ela confere esquema, vínculos explícitos e bytes locais contra SHA-256, sem executar comandos, chamar serviços, gravar estado ou conceder autorização. Mudanças nos bytes produzem `evidence_changed`; hashes iguais não provam que os resultados são verdadeiros, que uma verificação foi executada ou que o conteúdo satisfaz semanticamente os requisitos. O relatório não interpreta Markdown, não encontra requisitos omitidos e não autentica quem produziu uma evidência. Os cinco casos congelados (`clear-change`, `ambiguous-change`, `reproducible-bug`, `specification-delta` e `protected-action`) são sintéticos e não descrevem execuções de agentes. Consulte [a especificação v0.8.0](specs/milestones/v0.8.0/spec.md) para o contrato completo.

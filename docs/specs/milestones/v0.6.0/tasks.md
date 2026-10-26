@@ -1,12 +1,14 @@
 # v0.6.0 tasks — offline evaluation design
 
-The current D01/D02 deliverable is a documentation proposal in [spec.md](spec.md), [plan.md](plan.md), and [decisions.md](decisions.md). The follow-on implementation tasks below are not authorized by the Jev receipts or by this design. Do not start them until D03 is decided and a later task explicitly authorizes fixture/test work.
+The current D01/D02 deliverable is a documentation proposal in [spec.md](spec.md), [plan.md](plan.md), and [decisions.md](decisions.md). D03 selects artifact-handoff contract validation only. The follow-on fixture/test tasks below are not authorized by the Jev receipts, D03, or this design. Do not start them until a later task explicitly authorizes fixture/test work.
+
+The proposed fixtures and traces are synthetic test data. T02/T03 can validate deterministic contract handling and evidence linkage only; they do not execute agents, compare control and treatment sessions, or establish that a practice improves real-agent behavior, quality, productivity, safety, cost, tokens, or tool use.
 
 The existing T01 research history remains in [decisions.md](decisions.md) and [research.md](research.md); it is not reopened here.
 
-## T02 — Author the frozen five-case fixture records
+## T02 — Author the frozen synthetic five-case fixture records
 
-**Blocked by:** D03 candidate-scope decision and a later explicit authorization to create fixtures.
+**Blocked by:** a later explicit authorization to create fixtures. D03 is decided; it does not grant that authorization.
 **Files:** `fixtures/sdd_evaluation/clear-change.json`, `ambiguous-change.json`, `reproducible-bug.json`, `specification-delta.json`, `blocked-action.json`.
 
 **Acceptance criteria:**
@@ -18,7 +20,7 @@ The existing T01 research history remains in [decisions.md](decisions.md) and [r
 - [ ] Preserve baseline result schema v1 and its existing `acceptance` item shape; do not add runtime parsing or output fields.
 - [ ] No fixture records a live model/service call, vendor tool, token/cost claim, or authorization inferred from a recommendation.
 
-## T03 — Verify deterministic gates at the public baseline seams
+## T03 — Verify synthetic deterministic gates at the public baseline seams
 
 **Blocked by:** T02.
 **Files:** `tests/test_sdd_evaluation.py`.

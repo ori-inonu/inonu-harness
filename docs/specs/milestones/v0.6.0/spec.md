@@ -1,12 +1,14 @@
 # v0.6.0 — Offline evaluation design
 
-**Status:** design proposal for D01/D02; no fixture corpus or evaluation run has been created.
-**Scope:** specify a sanitized five-case corpus and a deterministic, per-fixture rubric for a later authorized offline evaluation.
+**Status:** D01/D02 design proposal with D03 candidate scope selected; no fixture corpus or evaluation run has been created.
+**Scope:** specify a sanitized five-case corpus and deterministic rubric to validate an artifact-handoff contract after separate authorization. This is not an evaluation of real-agent effectiveness.
 **Decision record:** [decisions.md](decisions.md). The research basis is [research.md](research.md).
 
 ## Goal and limits
 
-Define what a useful offline trace must show before considering any workflow practice for a later specification. The proposal preserves the current eight SDD stages and separates recommendations from authorization. It does not select a candidate practice, external project, integration, or router.
+Define what a useful offline trace must show for a narrow artifact-handoff contract: traceability from a requirement through specification and task to implementation/review evidence and deterministic convergence. This candidate is inspired by the explicit artifact handoffs described in the Spec Kit research ([research.md](research.md#spec-kit)); it does not adopt Spec Kit or select an external project, integration, or router. The proposal preserves the current eight SDD stages and separates recommendations from authorization.
+
+The proposed synthetic cases can validate whether fixed traces and a future validator satisfy the declared stage, linkage, evidence, and authority contracts. They do not contain observed control and treatment outputs from agents, so they cannot establish that artifact handoffs improve agent behavior, quality, productivity, safety, cost, token use, or tool use.
 
 The current increment is documentation only. It creates or executes no fixtures, changes no code, calls no live model or service, installs or adopts no tool, and implements no router. Later fixture creation or evaluation needs a separate authorized task after D03 candidate scope is decided.
 
@@ -98,6 +100,12 @@ For every case, the expected evidence reference is `spec.md#<case-id>`. A future
 
 A fixture passes only if every applicable gate passes; any failed applicable gate makes that fixture fail. Report each fixture and each gate separately. Keep reviewer notes in a separate qualitative field with their own evidence references; notes do not change gate status. Do not produce a weighted or composite score across gates or fixtures, or use these cases to claim agent quality, productivity, token, or cost gains.
 
+## D03 — Selected candidate scope: artifact-handoff contract
+
+The candidate practice for this offline contract validation is explicit linkage from each requirement or blocked request to its specification, task, implementation/review evidence, and deterministic verification or blocked outcome. `G-LINKAGE` and the case traces define the checkable contract. The future tests can show that the synthetic records and validator preserve or reject these links as specified; they cannot measure whether using the practice changes an agent's actual work. No control/treatment agent trace comparison is included.
+
+This scope selection is not authorization to create or execute the five fixtures, add tests or code, adopt/install Spec Kit, copy its materials, or change the runtime. The separate authorization required by [tasks.md](tasks.md) remains in force.
+
 ## Later execution boundary
 
-After D03 selects a candidate scope and a later task explicitly authorizes fixture/test implementation, use the existing Python standard-library baseline runner and public seams. No vendor package, live model, paid API, external service, or adaptive router is part of this design. See [plan.md](plan.md) and [tasks.md](tasks.md) for the ordered follow-on work.
+With D03 now selecting the artifact-handoff contract, fixture/test implementation still requires a later task that explicitly authorizes it. If authorized, use the existing Python standard-library baseline runner and public seams. No vendor package, live model, paid API, external service, or adaptive router is part of this design. See [plan.md](plan.md) and [tasks.md](tasks.md) for the ordered follow-on work.

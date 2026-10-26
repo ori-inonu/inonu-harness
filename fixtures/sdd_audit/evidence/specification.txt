@@ -1,0 +1,1 @@
+v0.8 synthetic specification evidence: immutable fixture bytes

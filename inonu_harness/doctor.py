@@ -9,6 +9,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import tomllib
 from pathlib import Path
 from typing import Any, Mapping
@@ -18,6 +19,10 @@ _STATE_VALUES = {"installed", "configured", "operational", "documented", "not_fo
 _NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 _VERSION = re.compile(r"(?<![A-Za-z0-9])\d+\.\d+(?:\.\d+)?(?:[-+][A-Za-z0-9.-]+)?")
 _SAFE_VERSION = re.compile(r"^\d+\.\d+(?:\.\d+)?(?:[-+][A-Za-z0-9.-]+)?$")
+_CODEGRAPH_PACKAGE = "@lzehrung/codegraph"
+_CODEGRAPH_REPOSITORY = "https://github.com/lzehrung/codegraph"
+_PACKAGE_MANIFEST_LIMIT = 64 * 1024
+_NPM_ROOT_OUTPUT_LIMIT = 4 * 1024
 _KNOWN_EVENTS = {
     "SessionStart", "SessionEnd", "UserPromptSubmit", "PreToolUse", "PostToolUse",
     "PostToolUseFailure", "Notification", "Stop", "SubagentStart", "SubagentStop",
@@ -95,6 +100,112 @@ class LocalProbe:
         if result.returncode != 0:
             return {"available": True, "version_output": None}
         return {"available": True, "version_output": result.stdout[:4096]}
+
+    @staticmethod
+    def _codegraph_package_metadata(executable: str | None, version_output: Any) -> dict[str, str] | None:
+        npm = shutil.which("npm")
+        cli_version = _version(version_output)
+        if executable is None or npm is None or cli_version is None:
+            return None
+        try:
+            with subprocess.Popen(
+                [npm, "root", "-g"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True
+            ) as process:
+                if process.stdout is None:
+                    return None
+                captured: list[str | None] = []
+
+                def read_output() -> None:
+                    try:
+                        output = process.stdout.read(_NPM_ROOT_OUTPUT_LIMIT + 1)
+                    except (OSError, ValueError):
+                        captured.append(None)
+                        return
+                    captured.append(output)
+                    if len(output) > _NPM_ROOT_OUTPUT_LIMIT:
+                        try:
+                            process.kill()
+                        except OSError:
+                            pass
+
+                reader = threading.Thread(target=read_output, daemon=True)
+                reader.start()
+                try:
+                    return_code = process.wait(timeout=4)
+                except subprocess.TimeoutExpired:
+                    try:
+                        process.kill()
+                    except OSError:
+                        pass
+                    process.wait()
+                    return None
+                finally:
+                    reader.join(timeout=1)
+                if reader.is_alive() or len(captured) != 1 or captured[0] is None or return_code != 0:
+                    return None
+                root_output = captured[0].strip()
+            if (
+                not root_output or len(captured[0]) > _NPM_ROOT_OUTPUT_LIMIT
+                or "\n" in root_output or "\r" in root_output
+            ):
+                return None
+            global_root = Path(root_output)
+            if not global_root.is_absolute() or global_root.name.casefold() != "node_modules":
+                return None
+            if os.name == "nt":
+                global_bin = global_root.parent
+            elif global_root.parent.name == "lib":
+                global_bin = global_root.parent.parent / "bin"
+            else:
+                return None
+            if Path(executable).parent.resolve() != global_bin.resolve():
+                return None
+
+            root_resolved = global_root.resolve()
+            manifest = (global_root / "@lzehrung" / "codegraph" / "package.json").resolve(strict=True)
+            if not manifest.is_relative_to(root_resolved):
+                return None
+            with manifest.open("rb") as stream:
+                contents = stream.read(_PACKAGE_MANIFEST_LIMIT + 1)
+            if len(contents) > _PACKAGE_MANIFEST_LIMIT:
+                return None
+
+            def unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+                result: dict[str, Any] = {}
+                for key, value in pairs:
+                    if key in result:
+                        raise ValueError("duplicate package metadata key")
+                    result[key] = value
+                return result
+
+            metadata = json.loads(contents, object_pairs_hook=unique_object)
+            if not isinstance(metadata, Mapping):
+                return None
+            version = metadata.get("version")
+            if not isinstance(version, str) or not _SAFE_VERSION.fullmatch(version):
+                return None
+            repository = metadata.get("repository")
+            if isinstance(repository, Mapping):
+                if repository.get("type") != "git":
+                    return None
+                repository = repository.get("url")
+            if isinstance(repository, str):
+                repository = repository.removeprefix("git+").removesuffix(".git")
+            if (
+                metadata.get("name") != _CODEGRAPH_PACKAGE
+                or version != cli_version
+                or metadata.get("license") != "MIT"
+                or repository != _CODEGRAPH_REPOSITORY
+            ):
+                return None
+            return {
+                "name": _CODEGRAPH_PACKAGE,
+                "version": version,
+                "license": "MIT",
+                "repository": _CODEGRAPH_REPOSITORY,
+            }
+        except (OSError, RuntimeError, ValueError, UnicodeError, subprocess.SubprocessError):
+            return None
 
     @staticmethod
     def _mcp_registry(executable: str | None) -> dict[str, Any]:
@@ -208,8 +319,11 @@ class LocalProbe:
         if project_hooks is not None:
             project_config["hooks_document"] = project_hooks
 
-        cli = {name: self._cli_version(shutil.which(name)) for name in ("codex", "rtk", "headroom", "codegraph", "jev-sdd")}
-        codex_path = shutil.which("codex")
+        executables = {name: shutil.which(name) for name in ("codex", "rtk", "headroom", "codegraph", "jev-sdd")}
+        cli = {name: self._cli_version(executable) for name, executable in executables.items()}
+        cli["codegraph"]["package_metadata"] = self._codegraph_package_metadata(
+            executables["codegraph"], cli["codegraph"]["version_output"]
+        )
         return {
             "platform": {
                 "name": platform_module.system(), "release": platform_module.release(),
@@ -219,7 +333,7 @@ class LocalProbe:
             "configurations": {"global": global_config, "project": project_config},
             "skills": self._skills(codex_home),
             "cli": cli,
-            "mcp_registry": self._mcp_registry(codex_path),
+            "mcp_registry": self._mcp_registry(executables["codex"]),
             "documentation": self._documented_integrations(),
         }
 
@@ -401,6 +515,22 @@ def _integration_statuses(
         "ponytail": {"value": "MIT skill", "source": "skill_frontmatter"},
         "sequential_thinking": {"value": "MIT", "source": "verified_upstream_metadata"},
     }
+    codegraph = cli.get("codegraph")
+    package_metadata = codegraph.get("package_metadata") if isinstance(codegraph, Mapping) else None
+    codegraph_version = _version(codegraph.get("version_output")) if isinstance(codegraph, Mapping) else None
+    if (
+        isinstance(package_metadata, Mapping)
+        and package_metadata.get("name") == _CODEGRAPH_PACKAGE
+        and package_metadata.get("version") == codegraph_version
+        and package_metadata.get("license") == "MIT"
+        and package_metadata.get("repository") == _CODEGRAPH_REPOSITORY
+    ):
+        licenses["codegraph"] = {
+            "value": "MIT",
+            "source": "local_package_manifest",
+            "upstream_value": "MIT",
+            "upstream_source": "official_repository",
+        }
     for key in _INTEGRATION_IDS:
         installed: dict[str, Any]
         if key == "jev":

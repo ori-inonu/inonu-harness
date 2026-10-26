@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "milestone_id": "v08.ambiguous-change",
+  "requirements": [
+    {
+      "id": "req.ambiguous",
+      "status": "unresolved",
+      "specification_evidence_id": "ev.spec"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task.ambiguous",
+      "artifact_evidence_id": "ev.task",
+      "requirement_ids": [
+        "req.ambiguous"
+      ],
+      "status": "complete",
+      "verification_ids": [
+        "check.ambiguous"
+      ]
+    }
+  ],
+  "verifications": [
+    {
+      "id": "check.ambiguous",
+      "requirement_ids": [
+        "req.ambiguous"
+      ],
+      "status": "pass",
+      "evidence_ids": [
+        "ev.check"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev.spec",
+      "path": "evidence/specification.txt",
+      "sha256": "c8901716603a5438b98294ad5937d46ec8f294be2afb801ba803329ba4734ef6"
+    },
+    {
+      "id": "ev.task",
+      "path": "evidence/task-artifact.txt",
+      "sha256": "862d96ffbf9973420ffe733825a5b9dcae091a776e67fc7de66beeef8478fc4b"
+    },
+    {
+      "id": "ev.check",
+      "path": "evidence/verification.txt",
+      "sha256": "65a6ed9f0cbef41e46689873584522030ce46a24c7eee7a0146a7312b70edfe2"
+    }
+  ]
+}

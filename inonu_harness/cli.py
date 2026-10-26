@@ -21,6 +21,7 @@ from .decision_graph import (
 )
 from .doctor import collect_environment
 from .sdd_adapter import SddDecisionContextAdapter
+from .sdd_audit import audit_manifest, load_audit_manifest
 from .sqlite_store import SQLiteDecisionStore
 
 
@@ -189,7 +190,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"inonu-harness {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
 
-    commands.add_parser("doctor", help="print a sanitized environment report as JSON")
+    doctor = commands.add_parser("doctor", help="print a sanitized environment report as JSON")
+    doctor.add_argument("--project-root", type=Path, help="project to inspect (default: this checkout)")
 
     baseline = commands.add_parser("baseline", help="run offline baseline fixtures or compare saved runs")
     baseline_commands = baseline.add_subparsers(dest="operation", required=True)
@@ -200,6 +202,12 @@ def _parser() -> argparse.ArgumentParser:
     compare = baseline_commands.add_parser("compare", help="compare saved result JSON files")
     compare.add_argument("before")
     compare.add_argument("after")
+
+    sdd = commands.add_parser("sdd", help="inspect optional SDD artifact contracts")
+    sdd_commands = sdd.add_subparsers(dest="operation", required=True)
+    audit = sdd_commands.add_parser("audit", help="audit a local artifact manifest")
+    audit.add_argument("manifest")
+    audit.add_argument("--root", type=Path, help="root directory for evidence paths (default: manifest directory)")
 
     _decision_parser(commands)
     return parser
@@ -284,7 +292,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         if args.command == "doctor":
-            _write_json(collect_environment())
+            _write_json(collect_environment(project_root=args.project_root))
         elif args.command == "baseline" and args.operation == "run":
             if args.fixture and args.fixture_option:
                 raise ValueError("provide fixture as either a positional argument or --fixture")
@@ -294,6 +302,12 @@ def main(argv: list[str] | None = None) -> int:
             _write_json(run_fixture(fixture, execution_id=args.execution_id))
         elif args.command == "baseline" and args.operation == "compare":
             _write_json(compare_runs(_read_json(args.before), _read_json(args.after)))
+        elif args.command == "sdd" and args.operation == "audit":
+            manifest = load_audit_manifest(args.manifest)
+            root = args.root if args.root is not None else Path(args.manifest).parent
+            report = audit_manifest(manifest, root)
+            _write_json(report)
+            return 0 if report["status"] == "pass" else 1
         elif args.command == "decisions":
             _write_json(_run_decision_command(args))
         return 0

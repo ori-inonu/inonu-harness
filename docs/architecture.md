@@ -1,12 +1,13 @@
-# Arquitetura local implementada (M0–M4)
+# Arquitetura local implementada
 
-O Inonu complementa o runtime Codex e o fluxo SDD existente com ferramentas locais. O M0–M4 implementa diagnóstico, avaliação por fixtures, um Decision Graph persistente e consumo manual de contexto; não cria um runtime de agente nem uma nova etapa SDD.
+O Inonu complementa o runtime Codex e o fluxo SDD existente com diagnóstico, avaliação por fixtures, um Decision Graph persistente, consumo manual de contexto e auditoria de artefatos. Os componentes locais seguem a sequência SDD existente.
 
 ## Componentes locais
 
 | Componente | Comportamento implementado |
 | --- | --- |
 | Doctor e baseline (M0) | `doctor` emite inventário sanitizado e usa `unknown` quando não pode verificar um fato. `baseline` executa fixtures offline e compara resultados com proveniência. |
+| Auditoria de artefatos SDD (v0.8) | `sdd audit` valida manifestos v1, vínculos explícitos e hashes de evidências locais; é somente leitura e opcional. |
 | Decision Graph (M0) | Armazena decisões em SQLite, com revisões, histórico, evidências, dependências e idempotência. Recomendações e autorizações são campos distintos. |
 | Adaptador JEV e gate (M0) | `JevAdapter` valida escolhas delimitadas e chama `consensus_plan` e `consensus_run` pelo transporte MCP injetado; testes usam o mock. `SddDecisionGate` é opcional e começa desativado. |
 | Contexto SDD (M1–M2) | `SddDecisionContextAdapter` expõe uma projeção allowlisted, somente de leitura, para IDs explícitos escolhidos pelo chamador. A CLI `decisions context` lê o banco existente em modo read-only. |
@@ -17,6 +18,8 @@ O registro de autorização do grafo exige evidência para cada critério requer
 O inventário de integrações registra que chamadas MCP do Jev funcionaram no chat coordenador em 2026-10-24. Esse fato descreve somente aquela sessão/host; não prova disponibilidade em outro cliente nem fornece transporte JEV portátil. A CLI local não configura transporte MCP ao vivo.
 
 O M3 é um protocolo documental de avaliação exploratória. O piloto não foi executado porque não havia evidência de isolamento text-only verificável neste host.
+
+A auditoria v0.8 não altera a sequência SDD de oito etapas e não executa verificações nem serviços. Seu relatório cobre apenas os vínculos e bytes declarados: hash detecta drift, mas não autentica uma execução nem valida significado de Markdown, requisitos omitidos ou conteúdo semântico. Os manifestos de demonstração são casos sintéticos.
 
 ## Limites e trabalho futuro
 

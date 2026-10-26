@@ -1,8 +1,13 @@
+import io
 import json
+import os
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from inonu_harness.doctor import collect_environment, load_manifest
+from inonu_harness.doctor import LocalProbe, collect_environment, load_manifest
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "doctor"
@@ -17,6 +22,154 @@ class FixtureProbe:
 
 
 class DoctorTests(unittest.TestCase):
+    def _codegraph_report(
+        self, *, manifest_updates=None, npm_timeout=False, executable_matches=True,
+        manifest_text=None, npm_output=None,
+    ):
+        with tempfile.TemporaryDirectory() as temporary_dir:
+            temporary_root = Path(temporary_dir)
+            project_root = temporary_root / "project"
+            user_root = temporary_root / "user"
+            project_root.mkdir()
+            user_root.mkdir()
+
+            prefix = temporary_root / "npm-global"
+            if os.name == "nt":
+                npm_root = prefix / "node_modules"
+                npm_bin = prefix
+                extension = ".cmd"
+            else:
+                npm_root = prefix / "lib" / "node_modules"
+                npm_bin = prefix / "bin"
+                extension = ""
+            package_dir = npm_root / "@lzehrung" / "codegraph"
+            package_dir.mkdir(parents=True)
+            manifest = {
+                "name": "@lzehrung/codegraph",
+                "version": "3.0.1",
+                "license": "MIT",
+                "repository": {"type": "git", "url": "git+https://github.com/lzehrung/codegraph.git"},
+            }
+            manifest.update(manifest_updates or {})
+            (package_dir / "package.json").write_text(
+                manifest_text if manifest_text is not None else json.dumps(manifest), encoding="utf-8"
+            )
+
+            codegraph_path = npm_bin / f"codegraph{extension}"
+            if not executable_matches:
+                codegraph_path = temporary_root / "other-bin" / f"codegraph{extension}"
+            npm_path = temporary_root / f"npm{extension}"
+            paths = {"codegraph": str(codegraph_path), "npm": str(npm_path)}
+            calls = {"popen": [], "wait_timeouts": [], "kills": []}
+
+            def fake_run(command, **kwargs):
+                if command == [paths["codegraph"], "--version"]:
+                    return subprocess.CompletedProcess(command, 0, stdout="codegraph 3.0.1\n", stderr="")
+                raise AssertionError(f"unexpected subprocess: {command!r}")
+
+            class FakeProcess:
+                def __init__(self, command):
+                    self.args = command
+                    self.stdout = io.StringIO(npm_output if npm_output is not None else f"{npm_root}\n")
+                    self.returncode = None
+
+                def wait(self, timeout=None):
+                    calls["wait_timeouts"].append(timeout)
+                    if npm_timeout and self.returncode is None:
+                        raise subprocess.TimeoutExpired(self.args, timeout)
+                    if self.returncode is None:
+                        self.returncode = 0
+                    return self.returncode
+
+                def kill(self):
+                    calls["kills"].append(self.args)
+                    self.returncode = -9
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, exc_type, exc_value, traceback):
+                    self.stdout.close()
+
+            def fake_popen(command, **kwargs):
+                if command != [paths["npm"], "root", "-g"]:
+                    raise AssertionError(f"unexpected process: {command!r}")
+                calls["popen"].append((command, kwargs))
+                return FakeProcess(command)
+
+            def fake_which(name):
+                return paths.get(name)
+
+            with (
+                patch("inonu_harness.doctor.platform_module.system", return_value="Windows" if os.name == "nt" else "Linux"),
+                patch("inonu_harness.doctor.platform_module.release", return_value="test"),
+                patch("inonu_harness.doctor.platform_module.machine", return_value="test"),
+                patch("inonu_harness.doctor.shutil.which", side_effect=fake_which),
+                patch("inonu_harness.doctor.subprocess.Popen", side_effect=fake_popen),
+                patch("inonu_harness.doctor.subprocess.run", side_effect=fake_run),
+            ):
+                report = collect_environment(LocalProbe(project_root, user_root))
+
+            return report, str(temporary_root), calls
+
+    def test_codegraph_package_manifest_is_reported_only_when_it_matches_the_cli(self):
+        report, temporary_path, calls = self._codegraph_report()
+        encoded = json.dumps(report, sort_keys=True)
+
+        self.assertEqual(report["schema_version"], 1)
+        self.assertEqual(
+            set(report["integrations"]["codegraph"]),
+            {"installed", "configured", "operational", "documented", "license"},
+        )
+        self.assertEqual(report["integrations"]["codegraph"]["license"], {
+            "value": "MIT",
+            "source": "local_package_manifest",
+            "upstream_value": "MIT",
+            "upstream_source": "official_repository",
+        })
+        self.assertEqual(len(calls["popen"]), 1)
+        command, kwargs = calls["popen"][0]
+        self.assertEqual(command[1:], ["root", "-g"])
+        self.assertFalse(kwargs.get("shell", False))
+        self.assertIn(4, calls["wait_timeouts"])
+        self.assertFalse(temporary_path in encoded)
+        for raw_manifest_value in ("@lzehrung", "https://github.com/lzehrung", "package.json", '"repository":', '"url":'):
+            self.assertFalse(raw_manifest_value in encoded)
+
+    def test_codegraph_package_mismatches_and_unavailable_npm_stay_unknown(self):
+        cases = (
+            {"manifest_updates": {"name": "@example/codegraph"}},
+            {"manifest_updates": {"version": "9.9.9"}},
+            {"manifest_updates": {"repository": "https://github.com/example/codegraph"}},
+            {"manifest_updates": {"license": "Apache-2.0"}},
+            {"executable_matches": False},
+            {"npm_timeout": True},
+            {"npm_output": "x" * (4 * 1024 + 1)},
+            {"manifest_text": "{not valid json"},
+        )
+        for case in cases:
+            with self.subTest(case=case):
+                report, temporary_path, _ = self._codegraph_report(**case)
+                encoded = json.dumps(report, sort_keys=True)
+                license_status = report["integrations"]["codegraph"]["license"]
+
+                self.assertIsNone(license_status["value"])
+                self.assertEqual(license_status["source"], "local_distribution_unverified")
+                self.assertEqual(license_status["upstream_value"], "MIT")
+                self.assertEqual(report["schema_version"], 1)
+                self.assertEqual(
+                    set(report["integrations"]["codegraph"]),
+                    {"installed", "configured", "operational", "documented", "license"},
+                )
+                self.assertFalse(temporary_path in encoded)
+                for raw_manifest_value in ("@lzehrung", "@example", "https://github.com", "package.json", '"repository":', '"url":'):
+                    self.assertFalse(raw_manifest_value in encoded)
+
+    def test_oversized_npm_root_output_is_terminated(self):
+        _, _, calls = self._codegraph_report(npm_output="x" * (4 * 1024 + 1))
+
+        self.assertEqual(len(calls["kills"]), 1)
+
     def test_report_is_allowlisted_json_with_provenance_and_unknowns(self):
         report = collect_environment(FixtureProbe("host_snapshot.json"))
         encoded = json.dumps(report, sort_keys=True)

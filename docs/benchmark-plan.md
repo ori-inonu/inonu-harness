@@ -51,3 +51,19 @@ Execute o recorte reproduzível com `python -m unittest discover -s tests -p tes
 A duração observada na condição com contexto limita-se à chamada local do CLI. A condição sem contexto não lê o grafo, então sua duração é `null` e a comparação de tempo fica incomparável; não é uma medição de economia. Runtime/modelo do agente, tokens e custo permanecem `null`. As listas de ferramentas, falhas, bloqueios e recuperações vêm do fixture e não são chamadas ou eventos observados. O teste reproduz a entrega dos campos em uma tarefa SDD local, sem executar um agente nem medir qualidade, produtividade ou velocidade de desenvolvimento.
 
 Execute a comparação com `python -m unittest discover -s tests -p test_sdd_context_evaluation.py -v`. O arquivo do banco é temporário e criado pelo teste; nenhum banco pessoal é lido.
+
+## Baseline local da auditoria SDD v0.8
+
+O teste `tests/test_sdd_audit_cli.py` chama `load_audit_manifest` e `audit_manifest` nos cinco manifestos congelados em `fixtures/sdd_audit`, com as evidências compartilhadas em `fixtures/sdd_audit/evidence`. As linhas de aceite de cada fixture de baseline são calculadas a partir do relatório retornado, cobrindo o status de aprovação e se todos os requisitos foram cobertos:
+
+| Caso sintético | Status esperado do relatório |
+| --- | --- |
+| `clear-change` | pass |
+| `ambiguous-change` | fail |
+| `reproducible-bug` | pass |
+| `specification-delta` | pass |
+| `protected-action` | fail |
+
+O teste passa esse fixture calculado por `run_fixture` e também pelo comando `baseline run`; ambos mantêm o schema de resultado v1. A proveniência da medida de aceite identifica `local-audit` e referencia o caso. Isso mede resultados do contrato de auditoria sobre fixtures locais, não uma execução de agente. Runtime e modelo, tokens de entrada e saída, e custo permanecem `null`; listas de eventos do fixture não são telemetria. O tempo materializado pelo baseline cobre somente a chamada local de `run_fixture`, não o cálculo anterior do relatório. Os casos são sintéticos, e resultados com hashes válidos não autenticam que verificações tenham sido realmente executadas.
+
+Reproduza esse recorte com `python -m unittest discover -s tests -p test_sdd_audit_cli.py -v`. Para o contrato completo e os limites do relatório, consulte a [especificação v0.8.0](specs/milestones/v0.8.0/spec.md).
