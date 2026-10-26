@@ -1,6 +1,6 @@
 # v0.9.0 checkpoint — 2026-10-26
 
-Status: public source preparation is release-ready for coordinator delivery. T05 convergence covers A7 and A8. This checkpoint does not complete the broader release objective.
+Status: public preparation converged, the coordinator published the implementation, and both local native profiles were applied and verified. Active host-session loading remains unverified. This milestone does not complete the broader Harness objective.
 
 ## Preparation graph
 
@@ -25,6 +25,14 @@ The reviewed public scope covers `README.md`, `CHANGELOG.md`, `docs/hosts.md`, t
 
 ## A8 — review disposition and delivery boundary
 
-No unresolved P1/P2 findings remain from T03 or T04. The public source preparation meets the v0.9.0 release-readiness criteria. Host application and actual host-registration verification under R7 remain coordinator work; the Inonu profiles are not claimed as applied or loaded in a host session. R8 commit, push and remote-revision verification also remain pending. Preserve existing complementary tools because replacement equivalence is not established, and keep private host configuration and reports outside the public source. Do not claim publication or completion of the broader release objective from this preparation checkpoint.
+No unresolved P1/P2 findings remain from T03 or T04. At the preparation boundary, R7 host application and R8 publication were still coordinator work. The engine subsequently reported `terminal: true` and `engineStatus: complete`, with no outstanding native tickets. The coordinator's later delivery evidence is recorded below; preparation alone did not establish it.
 
-Next action: the coordinator completes R7 host application and records registration, handshake, tool-result and session-loaded evidence separately; then completes R8 publication and verifies the pushed revision.
+## Coordinator delivery and CI follow-up
+
+- Published implementation commit `f16f360` to the existing `codex/m0-inonu-harness` branch and verified that the remote revision matched. No merge, force-push or default-branch change was performed.
+- Created a separate desktop checkout with the same remote and upstream branch. Applied both Inonu 0.9.0 user profiles from that checkout; repeat apply returned `unchanged`. Both ownership hashes matched, and the installed PowerShell and Bash runner commands succeeded from unrelated working directories. A real doctor invocation returned schema v1 without a personal home path. Private host configuration and detailed tool observations remain outside Git.
+- The first Linux CI run found two test-instrumentation failures: wrapping `os.open` removed its membership in `os.supports_dir_fd`, so the reader correctly returned before the simulated substitution. Follow-up commit `7ee66c8` preserves the wrapper's supported capability in the test context, keeps the safety assertions, and leaves production reader code unchanged. An independent read-only follow-up review found no issues.
+- [CI run 40305606958](https://github.com/ori-inonu/inonu-harness/actions/runs/40305606958) passed on Ubuntu with Python 3.11 and 3.14 at `7ee66c87684ed130d46956573f2553615463d226`: each considered 99 tests, passed 94 and skipped 5 Win32-only tests. All three POSIX regressions executed and passed in both jobs. This adds native POSIX evidence to the Windows results above.
+- Publication checks also normalized trailing blank lines in previously untracked milestone documents, refreshed the affected v0.8 manifest hashes, and reran its actual self-audit successfully. Staged whitespace validation passed.
+
+Keep complementary tools because replacement equivalence is unproven. Installing profiles, checking MCP connections and exercising local commands do not prove that an existing model session loaded them. The Claude Desktop native UI automation channel was unavailable; activation in a local Code-tab session remains an explicit limit. The changed Codex MCP launcher likewise requires a fresh client session for client-level confirmation. Portable activation guidance is in [hosts.md](../../../hosts.md).
