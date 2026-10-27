@@ -5,7 +5,7 @@
 
 Inonu is a local, reproducible toolkit for observing an agent environment, evaluating deterministic fixtures, and keeping a persistent history of engineering decisions. It complements the current Codex runtime and SDD workflow; it does not replace either.
 
-**Latest version:** v0.0.24 · [Release notes](https://github.com/ori-inonu/inonu-harness/releases/latest) · [Changelog](CHANGELOG.md) · [Versioning](docs/versioning.md)
+**Latest version:** v0.0.26 · [Release notes](https://github.com/ori-inonu/inonu-harness/releases/latest) · [Changelog](CHANGELOG.md) · [Versioning](docs/versioning.md)
 
 ## Contents
 
@@ -41,7 +41,7 @@ JEV recommendations are advisory and never grant authorization. Local authorizat
 - M3 documents an exploratory evaluation protocol only; the pilot has not been run. The optional SDD gate is disabled by default, and the existing eight SDD steps remain the normal workflow.
 - A standard-library loop runner, `loop run`, that repeats a caller-chosen `step` command and stops on verifier exit codes under four mandatory limits. It writes a JSONL log, calls no model, and proves nothing about agent quality.
 - An opt-in Stop hook, `hook stop`, that runs a project's trusted `.inonu/verify.json` checks on each Stop and blocks the stop on a failing check (exit 2). The owner grants trust per config with `hook trust --yes`, which records its SHA-256; nothing installs the hook unless `bundle apply --with-stop-hook --apply` is run. See [the hook reference](docs/hook.md).
-- `check` and `check --ref` run one deterministic gate (compile, version consistency, unit tests) on the working tree or on a commit's own blobs. `docs lint` checks instruction files, `SKILL.md` size and Markdown links.
+- `check` and `check --ref` run one deterministic gate (compile, version consistency, milestone folders, unit tests) on the working tree or on a commit's own blobs. `docs lint` checks instruction files, `SKILL.md` size and Markdown links.
 
 ### Install and manage hosts
 
@@ -53,6 +53,7 @@ See [native host profiles](docs/hosts.md) for preview/apply instructions, portab
 ### Milestones and versions
 
 - Milestones are numbered `v0.0.N`: a project starts at `v0.0.1` and each milestone raises the patch number. Minor and patch have at most two digits, so `v0.1.0` follows `v0.0.99`, and `1.0.0` is the owner's decision. `version --scheme` checks the scheme and `version --next` computes the next milestone's version. See [the versioning guide](docs/versioning.md).
+- Each milestone has a folder under `docs/specs/milestones/` with `spec.md`, `decisions.md`, `tasks.md` and, when it ships, `checkpoint.md`. `milestone new` creates the next folder, `milestone check` reports requirements that no task covers and other folder faults, and `milestone close` writes a checked milestone into `MILESTONES.md`, the newest-first index of closed milestones. See [the milestones guide](docs/milestones.md).
 
 ## Quick start
 
@@ -189,13 +190,13 @@ The check fails on the baseline run, the step writes `answer.txt`, and the next 
 
 ### Deterministic check
 
-Run the deterministic gate for this checkout. It compiles `inonu_harness`, `scripts` and `tests`, checks that the package version agrees across its manifests (the `versions` step), then runs the unit tests. It prints one JSON summary and exits 0 only when every step passes; child output goes to stderr. Use `--root PATH` to check another checkout with the same layout:
+Run the deterministic gate for this checkout. It compiles `inonu_harness`, `scripts` and `tests`, checks that the package version agrees across its manifests (the `versions` step), checks the milestone folders when `docs/specs/milestones` exists (the `milestones` step), then runs the unit tests. It prints one JSON summary and exits 0 only when every step passes; child output goes to stderr. Use `--root PATH` to check another checkout with the same layout:
 
 ```powershell
 python -m inonu_harness check
 ```
 
-To verify a commit instead of the working tree, commit first and run `check --ref HEAD`. The command writes that commit's own blobs (read with `git ls-tree` and `git cat-file`, so `.gitattributes` rules such as `export-ignore` and `export-subst`, and line-ending settings, do not change them) to a temporary directory, runs the same compile, versions and test steps there, then runs `scripts/inonu.py --version` as a `runner` step, and removes the export. The JSON adds `ref`. Exit codes: 0 for a pass, 1 for a failed step, 2 for invalid input such as a root outside a git repository or a ref that is not a commit. A pass shows that the commit is self-contained for its tests and its runner. It does not show that the plugin installs. The check covers the operating system where it runs only, and the CI workflow is unchanged. See [the plugin reference](docs/plugin.md#before-you-push).
+To verify a commit instead of the working tree, commit first and run `check --ref HEAD`. The command writes that commit's own blobs (read with `git ls-tree` and `git cat-file`, so `.gitattributes` rules such as `export-ignore` and `export-subst`, and line-ending settings, do not change them) to a temporary directory, runs the same compile, versions, milestones (when present) and test steps there, then runs `scripts/inonu.py --version` as a `runner` step, and removes the export. The JSON adds `ref`. Exit codes: 0 for a pass, 1 for a failed step, 2 for invalid input such as a root outside a git repository or a ref that is not a commit. A pass shows that the commit is self-contained for its tests and its runner. It does not show that the plugin installs. The check covers the operating system where it runs only, and the CI workflow is unchanged. See [the plugin reference](docs/plugin.md#before-you-push).
 
 ```powershell
 python -m inonu_harness check --ref HEAD
@@ -203,7 +204,15 @@ python -m inonu_harness check --ref HEAD
 
 A release edits the version in `inonu_harness/__init__.py`, `pyproject.toml` and `.claude-plugin/plugin.json` together. The `versions` step fails when those files differ, when one cannot be parsed or has no version, or when a stated version is outside the 0.MINOR.PATCH scheme; it also compares `.claude-plugin/marketplace.json` when that file states a version. To run only this comparison, use `python -m inonu_harness.versions [--root PATH]`: it prints each problem on stderr and exits 0 when there is none, 1 when there is at least one, and 2 for a root that is not a directory.
 
-The version scheme for milestones and releases, with `version --scheme` and `version --next`, is described in [the versioning guide](docs/versioning.md).
+The version scheme for milestones and releases, with `version --scheme` and `version --next`, is described in [the versioning guide](docs/versioning.md). The milestone folders are described in [the milestones guide](docs/milestones.md). `milestone new` creates the next one, `milestone check` reads them, and `milestone close` writes a checked milestone's entry into `docs/specs/milestones/MILESTONES.md`, the index of closed milestones:
+
+```powershell
+python -m inonu_harness milestone new --title "Short title"
+python -m inonu_harness milestone check --from 0.0.9
+python -m inonu_harness milestone close [VERSION] [--date YYYY-MM-DD]
+```
+
+Close writes that index and nothing else: it creates no tag, and moves, renames and deletes no file. It exits 0 when it writes, 1 with one reason per line when a check refuses, and 2 for invalid input.
 
 ### Documentation lint
 
@@ -229,6 +238,7 @@ The 200-line default is a configurable starting point, not a documented limit.
 | [docs/hook.md](docs/hook.md) | The Stop hook: trust, exit codes and limits. |
 | [docs/loop.md](docs/loop.md) | The loop runner: spec, limits, stop statuses and the log. |
 | [docs/versioning.md](docs/versioning.md) | The milestone version scheme and the table from old numbers to new. |
+| [docs/milestones.md](docs/milestones.md) | The milestone folder, `milestone new`, `check` and `close`, the finding rules and the index. |
 | [docs/benchmark-plan.md](docs/benchmark-plan.md) | The rules for any claim about quality, tokens or cost. |
 | [docs/specs/milestones/](docs/specs/milestones/) | One folder per milestone: spec, decisions, tasks and checkpoint. |
 
@@ -238,7 +248,7 @@ Every version has a [GitHub release](https://github.com/ori-inonu/inonu-harness/
 
 ## Repository layout
 
-- `inonu_harness/` — the package: doctor, baseline, Decision Graph, Jev contract and spec builder, SDD audit, loop runner, Stop hook, bundle installer, docs lint, version scheme and the CLI.
+- `inonu_harness/` — the package: doctor, baseline, Decision Graph, Jev contract and spec builder, SDD audit, loop runner, Stop hook, bundle installer, docs lint, version scheme, milestone folders and the CLI.
 - `scripts/` — `inonu.py`, the runner that works from any directory, and `configure_hosts.py`.
 - `skills/` and `agents/` — the Inonu skill and the Haiku worker agent that the bundle installs.
 - `.claude-plugin/` — the plugin manifest and marketplace.

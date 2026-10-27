@@ -6,6 +6,7 @@ Este repositório documenta uma configuração e arquitetura em pesquisa; não p
 - Ao mudar arquitetura, runtime ou recuperação de evidências, leia [docs/architecture.md](docs/architecture.md) e [docs/decisions.md](docs/decisions.md).
 - Ao instalar ou configurar ferramentas, leia [docs/integrations.md](docs/integrations.md).
 - Ao numerar milestones e versões, leia [docs/versioning.md](docs/versioning.md).
+- Ao criar ou verificar pastas de marcos, leia [docs/milestones.md](docs/milestones.md).
 - Ao fazer afirmações de qualidade, tokens ou custo, siga [docs/benchmark-plan.md](docs/benchmark-plan.md).
 - Use CodeGraph para perguntas que cruzam arquivos, símbolos, dependências ou impacto de uma mudança; use busca textual para strings/logs e ferramentas determinísticas para provar comportamento.
 
