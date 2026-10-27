@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Sequence
 from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
 import json
@@ -14,7 +15,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from . import __version__, versions
+from . import __version__, milestones, versions
 from .baseline import GATE_EXIT_CODES, compare_runs, gate_comparison, run_fixture
 from .bundle import plan_bundle
 from .bundle_apply import run_bundle, status_with_ownership
@@ -315,12 +316,12 @@ def _exportable_path(path: str) -> str:
     return path
 
 
-def _export_tree(top: Path, commit: str, tree: Path) -> None:
+def _export_tree(top: Path, commit: str, tree: Path) -> list[str]:
     """Write the commit's blobs exactly as stored.
 
     Unlike git archive, this applies no export-ignore, export-subst or line-ending conversion, so a committed file
     cannot silently go missing or change. Gitlinks (submodules) are not exported; a symlink becomes a plain file
-    holding its target text, never a link.
+    holding its target text, never a link, and its path is returned so that a step can refuse what it cannot read as a link.
 
     shortcut: every blob is held in memory once, upgrade to streaming cat-file for repositories of hundreds of megabytes.
     """
@@ -328,14 +329,17 @@ def _export_tree(top: Path, commit: str, tree: Path) -> None:
     if listing is None:
         raise ValueError("git could not export the ref")
     entries: list[tuple[str, str]] = []
+    symlinks: list[str] = []
     for record in listing.split(b"\0"):
         header, _, raw_path = record.partition(b"\t")
         fields = header.split(b" ")
         if len(fields) == 3 and fields[1] == b"blob":
             entries.append((fields[2].decode("ascii"), _exportable_path(os.fsdecode(raw_path))))
+            if fields[0] == b"120000":
+                symlinks.append(entries[-1][1])
     tree.mkdir(parents=True)
     if not entries:
-        return
+        return symlinks
     blobs = _git_bytes(top, "cat-file", "--batch", data="".join(f"{sha}\n" for sha, _ in entries).encode("ascii"))
     if blobs is None:
         raise ValueError("git could not export the ref")
@@ -350,10 +354,11 @@ def _export_tree(top: Path, commit: str, tree: Path) -> None:
         destination = root / rel  # rel passed _exportable_path, and only plain files are written
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(content)
+    return symlinks
 
 
-def _export_ref(checkout: Path, ref: str, scratch: Path) -> Path:
-    """Extract the commit REF under scratch; return the part of it that corresponds to checkout."""
+def _export_ref(checkout: Path, ref: str, scratch: Path) -> tuple[Path, list[str]]:
+    """Extract the commit REF under scratch; return the part of it that corresponds to checkout, and the committed symlinks."""
     top, prefix = _git(checkout, "rev-parse", "--show-toplevel"), _git(checkout, "rev-parse", "--show-prefix")
     if top is None or prefix is None:
         raise ValueError("check root must be inside a git repository")
@@ -361,23 +366,35 @@ def _export_ref(checkout: Path, ref: str, scratch: Path) -> Path:
     if not commit:
         raise ValueError("ref does not resolve to a commit")
     tree = scratch / "tree"
-    _export_tree(Path(top), commit, tree)  # from the repository top: a subdirectory root still sees the whole commit
-    return tree / prefix
+    symlinks = _export_tree(Path(top), commit, tree)  # from the repository top: a subdirectory root still sees the whole commit
+    return tree / prefix, symlinks
 
 
-def _run_steps(checkout: Path, *, runner: bool) -> list[dict[str, Any]]:
+def _under_milestones(path: str) -> bool:
+    return "/docs/specs/milestones/" in f"/{path}/"
+
+
+def _run_steps(checkout: Path, *, runner: bool, symlinks: Sequence[str] = ()) -> list[dict[str, Any]]:
     if not (checkout / "tests").is_dir():
         raise ValueError("check root must contain a tests directory")
     sources = [name for name in ("inonu_harness", "scripts", "tests") if (checkout / name).is_dir()]
     steps = [
         ("compile", [sys.executable, "-m", "compileall", "-q", *sources]),
         ("versions", [sys.executable, "-m", "inonu_harness.versions", "--scheme"]),
-        ("tests", [sys.executable, "-m", "unittest", "discover", "-s", "tests"]),
     ]
+    # v0.0.9 is the first milestone written in the R<n> format; the earlier ones predate it and are not checked.
+    if (checkout / "docs" / "specs" / "milestones").is_dir() or any(_under_milestones(path) for path in symlinks):
+        steps.append(("milestones", [sys.executable, "-m", "inonu_harness", "milestone", "check", "--from", "0.0.9"]))
+    steps.append(("tests", [sys.executable, "-m", "unittest", "discover", "-s", "tests"]))
     if runner:
         steps.append(("runner", [sys.executable, "scripts/inonu.py", "--version"]))
     results = []
     for name, command in steps:
+        if name == "milestones" and any(_under_milestones(path) for path in symlinks):
+            # the export writes a committed link as a plain file, which the check would read as an empty milestone
+            sys.stderr.write("a symbolic link is committed under docs/specs/milestones; the milestone check cannot read it\n")
+            results.append({"name": name, "exit_code": 1})
+            continue
         result = subprocess.run(
             command, cwd=checkout, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
         )
@@ -392,7 +409,8 @@ def _run_check(root: Path | None, ref: str | None = None) -> dict[str, Any]:
         steps = _run_steps(checkout, runner=False)
     else:
         with tempfile.TemporaryDirectory() as scratch:
-            steps = _run_steps(_export_ref(checkout, ref, Path(scratch)), runner=True)
+            tree, symlinks = _export_ref(checkout, ref, Path(scratch))
+            steps = _run_steps(tree, runner=True, symlinks=symlinks)
     report: dict[str, Any] = {"schema_version": 1, "passed": all(step["exit_code"] == 0 for step in steps), "steps": steps}
     if ref is not None:
         report["ref"] = ref
@@ -415,6 +433,9 @@ def _parser() -> argparse.ArgumentParser:
     version.add_argument("--root", type=Path, default=Path("."), help="checkout whose manifests are compared (default: current directory)")
     version.add_argument("--scheme", action="store_true", help="also require every stated version to be in the 0.MINOR.PATCH scheme")
     version.add_argument("--next", action="store_true", help="print the next milestone's version computed from the stated version")
+
+    milestone = commands.add_parser("milestone", help="create the next milestone folder, or check the milestone folders")
+    milestones.add_commands(milestone)
 
     bundle = commands.add_parser("bundle", help="inspect the host bundle without writing")
     bundle_commands = bundle.add_subparsers(dest="operation", required=True)
@@ -619,6 +640,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "version":
             flags = [flag for flag, chosen in (("--scheme", args.scheme), ("--next", args.next)) if chosen]
             return versions.main([*flags, "--root", str(args.root)])
+        elif args.command == "milestone":
+            return milestones.run(args)
         elif args.command == "bundle" and args.operation == "status":
             _write_json(status_with_ownership(args.host, args.home))
         elif args.command == "bundle" and args.operation in ("apply", "remove"):

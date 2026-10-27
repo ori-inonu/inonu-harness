@@ -205,6 +205,11 @@ def audit(root: Path, scheme: bool = False) -> list[str]:
     return _check(root, scheme)[0]
 
 
+def stated_versions(root: Path, scheme: bool = False) -> tuple[list[str], list[tuple[str, str]]]:
+    """The problem lines and the usable (label, version) statements under root, in source order; audit returns only the problems."""
+    return _check(root, scheme)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m inonu_harness.versions", description="Check that the stated package versions agree.")
     parser.add_argument("--root", type=Path, default=Path("."), help="checkout whose manifests are compared (default: current directory)")

@@ -57,7 +57,7 @@ The plugin installs from committed files, and a working-tree check cannot see a 
 python -m inonu_harness check --ref HEAD
 ```
 
-The command writes the commit's own blobs, read with `git ls-tree` and `git cat-file`, to a temporary directory (so `export-ignore`, `export-subst` and line-ending settings cannot hide or alter a committed file), runs the compile step, the version comparison, the unit tests and `scripts/inonu.py --version` there, and removes the export. Exit 0 means every step passed for that commit. Uncommitted edits do not affect the result. The check covers the operating system where it runs only, and the CI workflow is unchanged in this release.
+The command writes the commit's own blobs, read with `git ls-tree` and `git cat-file`, to a temporary directory (so `export-ignore`, `export-subst` and line-ending settings cannot hide or alter a committed file), runs the compile step, the version comparison, the milestone check (when `docs/specs/milestones` exists), the unit tests and `scripts/inonu.py --version` there, and removes the export. Exit 0 means every step passed for that commit. Uncommitted edits do not affect the result. The check covers the operating system where it runs only, and the CI workflow is unchanged in this release.
 
 A pass shows that the commit is self-contained for its tests and its runner. It does not show that the plugin installs or that a host loads it; see [What passing checks do not establish](#what-passing-checks-do-not-establish).
 

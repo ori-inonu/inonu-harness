@@ -12,6 +12,8 @@ Sections: **Added** (new behaviour), **Changed** (existing behaviour or rules), 
 
 | Version | First committed | Summary | Release |
 | --- | --- | --- | --- |
+| [0.0.26](#0026--2026-10-26) | 2026-10-27 | `milestone close` and `MILESTONES.md`, the index of closed milestones. | [v0.0.26](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.26) |
+| [0.0.25](#0025--2026-10-26) | 2026-10-27 | `milestone new` and `milestone check`, and a `milestones` step in `check`. | [v0.0.25](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.25) |
 | [0.0.24](#0024--2026-10-26) | 2026-10-26 | The `v0.0.N` milestone scheme, a manifest version check and SKILL.md size limits. | [v0.0.24](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.24) |
 | [0.0.23](#0023--2026-10-26) | 2026-10-26 | `jev spec` sends a document's text as the judge's facts. | [v0.0.23](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.23) |
 | [0.0.22](#0022--2026-10-26) | 2026-10-26 | An `ownership` value per item: ours, modified, foreign, none or unknown. | [v0.0.22](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.22) |
@@ -36,6 +38,56 @@ Sections: **Added** (new behaviour), **Changed** (existing behaviour or rules), 
 | [0.0.3](#003--2026-10-25) | 2026-10-25 | The manual `decisions context` command over an existing database. | [v0.0.3](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.3) |
 | [0.0.2](#002--2026-10-25) | 2026-10-25 | A read-only decision context adapter for explicitly chosen decision ids. | [v0.0.2](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.2) |
 | [0.0.1](#001--2026-10-25) | 2026-10-25 | Environment doctor, offline baseline runner, SQLite Decision Graph and a typed Jev adapter. | [v0.0.1](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.1) |
+
+## 0.0.26 — 2026-10-26
+
+**Release:** [v0.0.26](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.26) · **Milestone folder:** [docs/specs/milestones/v0.0.26](docs/specs/milestones/v0.0.26/)
+
+### Added
+
+- `python -m inonu_harness milestone close [VERSION] [--date YYYY-MM-DD] [--root DIR] [--dir RELDIR]` closes a milestone. When its folder, its `checkpoint.md`, the manifests and the index pass the close's checks, it writes the milestone's entry into `MILESTONES.md`, the newest-first index of closed milestones, and prints one JSON object with the version, the index path and the entry. It exits 1, writing nothing and printing one line per reason, when a check refuses, and 2 for invalid input. It creates no tag and moves, renames and deletes no file. The index starts at the first milestone closed with the command.
+- `tests/test_milestone_close.py` covers each refusal of the close, the index writes and their atomic replacement, the deferred items, the index and checkpoint rules of `check`, and this repository's own milestones.
+
+### Changed
+
+- `check` reports `checkpoint_version_mismatch` for a milestone whose `checkpoint.md` does not name its own version in its first non-empty line. It lints `MILESTONES.md` when that file exists, whatever `--from` says, with the rules `index_malformed`, `index_order`, `index_duplicate`, `index_link_broken`, `index_date_invalid` and `index_date_order`, all errors. The `milestones` step still runs in the same place.
+- [docs/milestones.md](docs/milestones.md) describes the close, the index format, the checkpoint that the close requires and the new rules. [docs/versioning.md](docs/versioning.md) says that the manifests are bumped before the close. The README, [docs/sdd-workflow.md](docs/sdd-workflow.md) and the installed skill carry the command.
+- The version is 0.0.26 in `inonu_harness/__init__.py`, `pyproject.toml` and `.claude-plugin/plugin.json`. `.claude-plugin/marketplace.json` still states no version, so it was not changed.
+
+### Limits
+
+- The close checks the first line of `checkpoint.md`, its `Status:` line, its `## Verification` and `## Limits` headings, and the reasons of its deferred items. It does not run the verification commands, read `## Flow` or `## Next`, or check that the work passed.
+- A warning does not refuse a close, so a milestone whose spec has no requirement item closes with `- Requirements: 0`.
+- Earlier milestones have no entry in the index, and none is backfilled. `MILESTONES.md` is an ordinary file, so a hand edit is detected only when it breaks the format.
+- Nothing is tagged, moved or deleted, and git is not read. The date is the one given, or today's; it may not be later than today or earlier than the newest date in the index.
+- The reason of a deferred item is any text after an em dash or a colon, so a colon inside a URL counts. The first line of a checkpoint only has to name the version, so a line that says it was copied from another milestone passes for the milestone it names.
+- The close rewrites the whole index: line endings become LF and a byte order mark is dropped. On POSIX the temporary file makes the index mode 0600. Two closes of the same version at the same moment both succeed and the later write wins; two different versions cannot race, because each needs the manifests to state its own version.
+- A spec title with a control character or more than 120 characters is left out of the entry.
+
+## 0.0.25 — 2026-10-26
+
+**Release:** [v0.0.25](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.25) · **Milestone folder:** [docs/specs/milestones/v0.0.25](docs/specs/milestones/v0.0.25/)
+
+### Added
+
+- `python -m inonu_harness milestone new [--title TEXT] [--root DIR] [--dir RELDIR]` creates the folder of the next milestone with `spec.md`, `decisions.md` and `tasks.md` from fixed templates, and prints one JSON object with its version, directory and files. The version is the next one after the version the manifests state, else after the highest milestone folder, else `0.0.1`. It never overwrites a file. It exits 1, creating nothing, when the folder exists, the manifests disagree or leave the scheme, or the scheme is at `0.99.99`; it removes what it made when a write fails. `--title` is one line of 1 to 120 characters without control characters.
+- `python -m inonu_harness milestone check [VERSION ...] [--from VERSION] [--root DIR] [--dir RELDIR]` reads the milestone folders and prints a JSON report of findings: requirements that no task row cites, citations of undefined requirements, duplicate or gapped ids, invalid ranges and the folder and file rules. Exit 0 when there is no error finding, 1 otherwise, 2 for invalid input. Each rule and its severity is in [docs/milestones.md](docs/milestones.md).
+- `inonu_harness/milestones.py` with `new_milestone` and `check_milestones`, runnable as `python -m inonu_harness.milestones` and reached through the `milestone` subcommand, and `tests/test_milestones.py`.
+- [docs/milestones.md](docs/milestones.md) describes the milestone folder, both commands, the finding rules, how a milestone starts, runs, closes and bumps the manifests, the `--from` flag, a short comparison with GSD and the limits. The installed skill carries both commands, and README, AGENTS.md and [docs/sdd-workflow.md](docs/sdd-workflow.md) link to the guide.
+
+### Changed
+
+- `check` runs a `milestones` step between `versions` and `tests`: `python -m inonu_harness milestone check --from 0.0.9`. It runs only when `docs/specs/milestones` exists in the checked directory, and with `--ref` in the temporary export. The milestones before v0.0.9 predate the `R<n>` format and are skipped by name. The other steps are unchanged.
+- The version is 0.0.25 in `inonu_harness/__init__.py`, `pyproject.toml` and `.claude-plugin/plugin.json`. `.claude-plugin/marketplace.json` still states no version, so it was not changed.
+
+### Limits
+
+- The commands read only the formats they describe: the three files of a milestone folder, requirement items under `## Requirements`, and table rows that start with `|`. They report and never edit a requirement, a manifest or `checkpoint.md`, and they do not decide that a requirement is done.
+- `milestone new` does not close a milestone, write `checkpoint.md` or bump the manifests. How a milestone closes, with a deferred-items ledger and an index, is not decided here; 0.0.26 adds `milestone close`.
+- The check does not read git tags or other files that state a version, and the milestones before v0.0.9 are not checked.
+- A committed symbolic link under `docs/specs/milestones` fails the `milestones` step of `check --ref`, because the export writes a link as a plain file that the check would read as an empty milestone. A `--ref` export of a commit that has the milestones folder but not `inonu_harness/milestones.py` fails the step with an import error from that commit.
+- Requirement items are read under `## Requirements` and under later `Revision` headings until a section for deferred work; a retired requirement kept in an HTML comment is skipped. A range written with spaces around a hyphen or with an em dash is not read as a range.
+- A tasks table is read through intervals, so a hostile file costs little: more than 10,000 references stop the coverage rules, and at most 50 findings are listed per coverage rule.
 
 ## 0.0.24 — 2026-10-26
 

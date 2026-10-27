@@ -26,7 +26,8 @@ After `0.0.99` the next milestone is `0.1.0`, and the patch starts again at 0.
 
 ## Rules for every project
 
-- Every file that states the project's version carries the version of the current milestone, and a release edits them together. In this repository these files are `inonu_harness/__init__.py`, `pyproject.toml`, `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` when it states a version.
+- Every file that states the project's version carries the version of the latest milestone that shipped, and shipping a milestone edits them together; `milestone new` then proposes the next one. In this repository these files are `inonu_harness/__init__.py`, `pyproject.toml`, `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` when it states a version.
+- The manifests are bumped to a milestone's version before the milestone is closed: `milestone close` refuses unless they state the version it closes.
 - A project that keeps milestone artifacts names each milestone directory after its version, `docs/specs/milestones/vMAJOR.MINOR.PATCH`, for example `docs/specs/milestones/v0.0.24`.
 
 ## Commands
