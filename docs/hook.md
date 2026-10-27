@@ -109,6 +109,6 @@ The first command previews and writes nothing. Its stop-hook item carries a `not
 
 The ownership ledger records the group's hash. `bundle remove` reverses the group only while that hash still matches, and keeps it when someone edited it. Nothing installs the hook unless the owner runs `bundle apply --with-stop-hook --apply`.
 
-An earlier registration ending in ` check`, from before 0.20.0, is still recognized as an Inonu hook. `bundle status` reports it as `present`, and `bundle apply` reports a conflict rather than adding a second group. Run `bundle remove --host claude --with-stop-hook --apply` first; it reverses that registration only when the ledger recorded it. Then apply again.
+An earlier registration ending in ` check`, from before 0.0.20, is still recognized as an Inonu hook. `bundle status` reports it as `present`, and `bundle apply` reports a conflict rather than adding a second group. Run `bundle remove --host claude --with-stop-hook --apply` first; it reverses that registration only when the ledger recorded it. Then apply again.
 
 See [native host profiles](hosts.md#install-the-full-bundle) for the ledger, backups and conflict rules, and [the plugin reference](plugin.md) for why the plugin itself ships no hook.

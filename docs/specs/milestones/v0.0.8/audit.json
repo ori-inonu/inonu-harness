@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "milestone_id": "v0.0.8",
+  "requirements": [
+    {
+      "id": "R1",
+      "status": "defined",
+      "specification_evidence_id": "spec-v08"
+    },
+    {
+      "id": "R2",
+      "status": "defined",
+      "specification_evidence_id": "spec-v08"
+    },
+    {
+      "id": "R3",
+      "status": "defined",
+      "specification_evidence_id": "spec-v08"
+    },
+    {
+      "id": "R4",
+      "status": "defined",
+      "specification_evidence_id": "spec-v08"
+    },
+    {
+      "id": "R5",
+      "status": "defined",
+      "specification_evidence_id": "spec-v08"
+    },
+    {
+      "id": "R6",
+      "status": "defined",
+      "specification_evidence_id": "spec-v08"
+    },
+    {
+      "id": "R7",
+      "status": "defined",
+      "specification_evidence_id": "spec-v08"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T01",
+      "artifact_evidence_id": "tasks-v08",
+      "requirement_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R6"
+      ],
+      "status": "complete",
+      "verification_ids": [
+        "focused-audit-tests",
+        "full-suite"
+      ]
+    },
+    {
+      "id": "T02",
+      "artifact_evidence_id": "tasks-v08",
+      "requirement_ids": [
+        "R5",
+        "R6",
+        "R7"
+      ],
+      "status": "complete",
+      "verification_ids": [
+        "focused-audit-tests",
+        "full-suite",
+        "review-recheck"
+      ]
+    },
+    {
+      "id": "T03",
+      "artifact_evidence_id": "tasks-v08",
+      "requirement_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R7"
+      ],
+      "status": "complete",
+      "verification_ids": [
+        "review-recheck"
+      ]
+    },
+    {
+      "id": "T04",
+      "artifact_evidence_id": "tasks-v08",
+      "requirement_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7"
+      ],
+      "status": "complete",
+      "verification_ids": [
+        "review-recheck"
+      ]
+    },
+    {
+      "id": "T05",
+      "artifact_evidence_id": "tasks-v08",
+      "requirement_ids": [
+        "R6",
+        "R7"
+      ],
+      "status": "complete",
+      "verification_ids": [
+        "focused-audit-tests",
+        "full-suite",
+        "review-recheck"
+      ]
+    }
+  ],
+  "verifications": [
+    {
+      "id": "focused-audit-tests",
+      "requirement_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "status": "pass",
+      "evidence_ids": [
+        "validation-v08"
+      ]
+    },
+    {
+      "id": "full-suite",
+      "requirement_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "status": "pass",
+      "evidence_ids": [
+        "validation-v08"
+      ]
+    },
+    {
+      "id": "review-recheck",
+      "requirement_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7"
+      ],
+      "status": "pass",
+      "evidence_ids": [
+        "validation-v08"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "spec-v08",
+      "path": "spec.md",
+      "sha256": "b8dc9e01afe0650c840eb1045d7a5c21ac1879652f8c4d96b784168ee732984b"
+    },
+    {
+      "id": "tasks-v08",
+      "path": "tasks.md",
+      "sha256": "7228bfe0dfdb0cdbc05095b6d88e3d6c955fb64463385129fe1e0cd67a6e63f9"
+    },
+    {
+      "id": "validation-v08",
+      "path": "validation.json",
+      "sha256": "56316c374d03239377f60f191c71af53ab5955414dace5ae3d448348a8651616"
+    }
+  ]
+}

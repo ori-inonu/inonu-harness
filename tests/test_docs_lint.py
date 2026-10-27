@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 from inonu_harness.cli import main
 from inonu_harness.docs_lint import lint
@@ -50,6 +51,18 @@ class LintCase(unittest.TestCase):
         self.write("docs/deep/page.md", "[u](../../missing.md)\n")
         self.write("docs/bad.md", b"\xff")
         self.write("README.md", "[r](docs/none.md)\n")
+
+    def link_directory(self, target, link):
+        """Point link at target as a symlink or, on Windows, a junction; skip the test when neither can be made."""
+        try:
+            os.symlink(target, link, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            # Windows needs a privilege for symlinks but not for a directory junction, which resolves the same way.
+            made = os.name == "nt" and subprocess.run(
+                ["cmd", "/c", "mklink", "/J", str(link), str(target)], capture_output=True, check=False,
+            ).returncode == 0
+            if not made:
+                self.skipTest("directory links are not available on this host")
 
 
 class RuleTests(LintCase):
@@ -188,16 +201,7 @@ class ParsingTests(LintCase):
         outside.mkdir()
         (outside / "secret.md").write_text("[x](gone.md)\n", encoding="utf-8")
         (self.root / "docs").mkdir()
-        link = self.root / "docs" / "linked"
-        try:
-            os.symlink(outside, link, target_is_directory=True)
-        except (OSError, NotImplementedError):
-            # Windows needs a privilege for symlinks but not for a directory junction, which resolves the same way.
-            made = os.name == "nt" and subprocess.run(
-                ["cmd", "/c", "mklink", "/J", str(link), str(outside)], capture_output=True, check=False,
-            ).returncode == 0
-            if not made:
-                self.skipTest("directory links are not available on this host")
+        self.link_directory(outside, self.root / "docs" / "linked")
         self.assertEqual([("link_escapes_root", "docs/linked", None)], self.rules())
 
 
@@ -243,6 +247,150 @@ class SkipTests(LintCase):
         self.write("docs/b.md", "x\n")
         self.write("docs/guide/c.md", "x\n")
         self.assertEqual([], self.rules())
+
+
+class SkillTests(LintCase):
+    def test_skill_at_the_byte_limit_is_reported_and_one_byte_less_is_not(self):
+        self.write("skills/x/SKILL.md", "x" * 19999)
+        self.assertEqual([], self.rules(max_bytes=1, max_lines=1))  # the instruction limits do not apply to skills
+        self.write("skills/x/SKILL.md", "x" * 20000)
+        self.assertEqual([("skill_file_too_large", "skills/x/SKILL.md", None)], self.rules())
+
+    def test_skill_at_the_line_limit_is_reported_and_one_line_less_is_not(self):
+        self.write("skills/x/SKILL.md", "x\n" * 499)
+        self.assertEqual([], self.rules())
+        self.write("skills/x/SKILL.md", "x\n" * 500)
+        self.assertEqual([("skill_file_too_long", "skills/x/SKILL.md", None)], self.rules())
+
+    def test_skill_nested_below_another_folder_is_read(self):
+        self.write("skills/outer/inner/SKILL.md", "x" * 20000)
+        self.assertEqual([("skill_file_too_large", "skills/outer/inner/SKILL.md", None)], self.rules())
+
+    def test_links_in_a_skill_are_relative_to_its_own_directory(self):
+        self.write("skills/x/refs/guide.md", "x\n")
+        self.write("docs/guide.md", "x\n")
+        self.write("skills/x/SKILL.md", "[own](refs/guide.md)\n[up](../../docs/guide.md)\n[root](docs/guide.md)\n[gone](refs/none.md)\n")
+        self.assertEqual([("link_broken", "skills/x/SKILL.md", 3), ("link_broken", "skills/x/SKILL.md", 4)], self.rules())
+
+    def test_skill_in_a_linked_directory_outside_the_root_is_not_read(self):
+        outside = self.parent / "outside"
+        outside.mkdir()
+        (outside / "SKILL.md").write_text("x" * 20000 + "\n[x](gone.md)\n", encoding="utf-8")
+        (self.root / "skills").mkdir()
+        self.link_directory(outside, self.root / "skills" / "linked")
+        self.assertEqual([("link_escapes_root", "skills/linked", None)], self.rules())
+
+    def test_only_skill_md_under_skills_is_read_and_a_skill_under_docs_is_an_ordinary_document(self):
+        self.write("skills/x/notes.md", "x" * 20000)
+        self.write("docs/x/SKILL.md", "x\n" * 500 + "x" * 20000)
+        self.assertEqual([], self.rules())
+
+    def test_skill_size_is_measured_in_bytes_not_characters(self):
+        self.write("skills/x/SKILL.md", "é" * 10000)  # two bytes per character: 20,000 bytes
+        self.assertEqual([("skill_file_too_large", "skills/x/SKILL.md", None)], self.rules())
+        self.write("skills/x/SKILL.md", "é" * 9999)
+        self.assertEqual([], self.rules())
+
+    def test_skill_file_name_is_matched_in_any_case(self):
+        self.write("skills/x/skill.md", "x" * 20000)
+        self.write("skills/y/Skill.MD", "x\n" * 500)
+        self.assertEqual(
+            [("skill_file_too_large", "skills/x/skill.md", None), ("skill_file_too_long", "skills/y/Skill.MD", None)],
+            self.rules(),
+        )
+
+    def test_a_skill_folder_that_cannot_be_listed_is_reported_and_never_read_as_empty(self):
+        self.write("skills/open/SKILL.md", "x" * 20000)
+        self.write("skills/locked/SKILL.md", "x" * 20000)
+        real_scandir = os.scandir
+
+        def denied(path="."):
+            if os.path.basename(os.fspath(path)) == "locked":
+                raise PermissionError(13, "permission denied", os.fspath(path))
+            return real_scandir(path)
+
+        with mock.patch("os.scandir", denied):
+            self.assertEqual(
+                [("directory_unreadable", "skills/locked", None), ("skill_file_too_large", "skills/open/SKILL.md", None)],
+                self.rules(),
+            )
+
+    def test_a_skills_folder_that_is_a_link_inside_the_root_is_read_through_the_link(self):
+        self.write("real/x/SKILL.md", "x" * 20000)
+        self.link_directory(self.root / "real", self.root / "skills")
+        self.assertEqual([("skill_file_too_large", "skills/x/SKILL.md", None)], self.rules())
+
+    def test_a_link_below_skills_to_a_folder_outside_skills_but_inside_the_root_is_followed(self):
+        self.write("agents/big/SKILL.md", "x" * 20000)
+        (self.root / "skills").mkdir()
+        self.link_directory(self.root / "agents" / "big", self.root / "skills" / "alias")
+        self.assertEqual([("skill_file_too_large", "skills/alias/SKILL.md", None)], self.rules())
+
+    def test_a_link_below_skills_to_a_folder_that_is_already_below_skills_is_read_once(self):
+        self.write("skills/real/SKILL.md", "x" * 20000)
+        self.link_directory(self.root / "skills" / "real", self.root / "skills" / "alias")
+        self.assertEqual([("skill_file_too_large", "skills/real/SKILL.md", None)], self.rules())
+
+    def test_two_links_to_the_same_folder_are_read_once_and_a_cycle_ends(self):
+        self.write("agents/big/SKILL.md", "x" * 20000)
+        (self.root / "skills").mkdir()
+        self.link_directory(self.root / "agents" / "big", self.root / "skills" / "a")
+        self.link_directory(self.root / "agents" / "big", self.root / "skills" / "b")
+        self.link_directory(self.root / "skills", self.root / "agents" / "big" / "back")
+        self.assertEqual(1, len(self.rules()))
+
+    def test_a_docs_folder_that_is_a_link_inside_the_root_keeps_its_own_path_in_findings(self):
+        self.write("real_docs/a.md", "[x](gone.md)\n")
+        self.link_directory(self.root / "real_docs", self.root / "docs")
+        self.assertEqual([("link_broken", "docs/a.md", 1)], self.rules())
+
+    def test_a_skill_that_cannot_be_read_is_a_finding_and_not_an_exception(self):
+        self.write("skills/x/SKILL.md", "fine\n")
+        real = Path.read_bytes
+
+        def denied(path):
+            if path.name == "SKILL.md":
+                raise PermissionError
+            return real(path)
+
+        with mock.patch.object(Path, "read_bytes", denied):
+            self.assertEqual([("file_unreadable", "skills/x/SKILL.md", None)], self.rules())
+
+    def test_skill_size_counts_bytes_and_not_characters(self):
+        self.write("skills/x/SKILL.md", "é" * 10000)  # 10,000 characters, 20,000 bytes
+        self.assertEqual([("skill_file_too_large", "skills/x/SKILL.md", None)], self.rules())
+        self.write("skills/x/SKILL.md", "é" * 9999)
+        self.assertEqual([], self.rules())
+
+    def test_a_skills_folder_that_is_a_link_outside_the_root_is_reported_and_not_read(self):
+        outside = self.parent / "outside"
+        (outside / "x").mkdir(parents=True)
+        (outside / "x" / "SKILL.md").write_text("x" * 20000, encoding="utf-8")
+        self.link_directory(outside, self.root / "skills")
+        self.assertEqual([("link_escapes_root", "skills/x/SKILL.md", None)], self.rules())
+
+    def test_a_skill_file_that_is_a_link_outside_the_root_is_reported_and_not_read(self):
+        outside = self.parent / "outside.md"
+        outside.write_text("[x](gone.md)\n" + "x" * 20000, encoding="utf-8")
+        (self.root / "skills" / "x").mkdir(parents=True)
+        try:
+            os.symlink(outside, self.root / "skills" / "x" / "SKILL.md")
+        except (OSError, NotImplementedError):
+            self.skipTest("file symbolic links are not available on this host")
+        self.assertEqual([("link_escapes_root", "skills/x/SKILL.md", None)], self.rules())
+
+    def test_a_skill_file_that_resolves_outside_the_root_is_reported_without_creating_a_link(self):
+        self.write("skills/x/SKILL.md", "x" * 20000)
+        outside = self.parent / "outside.md"
+        real_resolve = Path.resolve
+
+        def resolve(path, *args, **kwargs):
+            if path.name == "SKILL.md" and path.parent.name == "x":
+                return outside
+            return real_resolve(path, *args, **kwargs)
+
+        with mock.patch.object(Path, "resolve", resolve):
+            self.assertEqual([("link_escapes_root", "skills/x/SKILL.md", None)], self.rules())
 
 
 class ContractTests(LintCase):

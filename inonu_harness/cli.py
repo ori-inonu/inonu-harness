@@ -14,7 +14,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from . import __version__
+from . import __version__, versions
 from .baseline import GATE_EXIT_CODES, compare_runs, gate_comparison, run_fixture
 from .bundle import plan_bundle
 from .bundle_apply import run_bundle, status_with_ownership
@@ -371,6 +371,7 @@ def _run_steps(checkout: Path, *, runner: bool) -> list[dict[str, Any]]:
     sources = [name for name in ("inonu_harness", "scripts", "tests") if (checkout / name).is_dir()]
     steps = [
         ("compile", [sys.executable, "-m", "compileall", "-q", *sources]),
+        ("versions", [sys.executable, "-m", "inonu_harness.versions", "--scheme"]),
         ("tests", [sys.executable, "-m", "unittest", "discover", "-s", "tests"]),
     ]
     if runner:
@@ -409,6 +410,11 @@ def _parser() -> argparse.ArgumentParser:
     check = commands.add_parser("check", help="compile and run the test suite; print a JSON verdict")
     check.add_argument("--root", type=Path, help="checkout to verify (default: this checkout)")
     check.add_argument("--ref", help="verify this commit in a temporary export instead of the working tree")
+
+    version = commands.add_parser("version", help="check the milestone version scheme, or print the next milestone's version")
+    version.add_argument("--root", type=Path, default=Path("."), help="checkout whose manifests are compared (default: current directory)")
+    version.add_argument("--scheme", action="store_true", help="also require every stated version to be in the 0.MINOR.PATCH scheme")
+    version.add_argument("--next", action="store_true", help="print the next milestone's version computed from the stated version")
 
     bundle = commands.add_parser("bundle", help="inspect the host bundle without writing")
     bundle_commands = bundle.add_subparsers(dest="operation", required=True)
@@ -610,6 +616,9 @@ def main(argv: list[str] | None = None) -> int:
             # ASCII-escaped: a ref name outside the stdout code page must not turn a finished check into exit 2
             print(json.dumps(report, indent=2, sort_keys=True))
             return 0 if report["passed"] else 1
+        elif args.command == "version":
+            flags = [flag for flag, chosen in (("--scheme", args.scheme), ("--next", args.next)) if chosen]
+            return versions.main([*flags, "--root", str(args.root)])
         elif args.command == "bundle" and args.operation == "status":
             _write_json(status_with_ownership(args.host, args.home))
         elif args.command == "bundle" and args.operation in ("apply", "remove"):

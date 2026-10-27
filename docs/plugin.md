@@ -57,7 +57,7 @@ The plugin installs from committed files, and a working-tree check cannot see a 
 python -m inonu_harness check --ref HEAD
 ```
 
-The command writes the commit's own blobs, read with `git ls-tree` and `git cat-file`, to a temporary directory (so `export-ignore`, `export-subst` and line-ending settings cannot hide or alter a committed file), runs the compile step, the unit tests and `scripts/inonu.py --version` there, and removes the export. Exit 0 means every step passed for that commit. Uncommitted edits do not affect the result. The check covers the operating system where it runs only, and the CI workflow is unchanged in this release.
+The command writes the commit's own blobs, read with `git ls-tree` and `git cat-file`, to a temporary directory (so `export-ignore`, `export-subst` and line-ending settings cannot hide or alter a committed file), runs the compile step, the version comparison, the unit tests and `scripts/inonu.py --version` there, and removes the export. Exit 0 means every step passed for that commit. Uncommitted edits do not affect the result. The check covers the operating system where it runs only, and the CI workflow is unchanged in this release.
 
 A pass shows that the commit is self-contained for its tests and its runner. It does not show that the plugin installs or that a host loads it; see [What passing checks do not establish](#what-passing-checks-do-not-establish).
 
@@ -65,7 +65,7 @@ A pass shows that the commit is self-contained for its tests and its runner. It 
 
 `version` in `.claude-plugin/plugin.json` equals the package version (a structural test enforces it). Per the plugin docs as read on 2026-10-26, when `version` is set, an installed user stays on the cached copy until that string changes. Without `version`, the plugin would follow new commits instead.
 
-To publish a change, bump the version in `.claude-plugin/plugin.json`, `pyproject.toml` and `inonu_harness/__init__.py`. The structural tests require all three to match. Update an installed copy with your Claude Code plugin manager. This page does not verify a specific update command.
+A release edits the version in these three manifests: `.claude-plugin/plugin.json`, `pyproject.toml` and `inonu_harness/__init__.py`. The structural tests require all three to match. The `versions` step of `check` compares them too, requires the version to be in the milestone scheme (see [versioning](versioning.md)), and also compares `.claude-plugin/marketplace.json` when that file states a version. Update an installed copy with your Claude Code plugin manager. This page does not verify a specific update command.
 
 ## Not verified
 
@@ -78,7 +78,7 @@ To publish a change, bump the version in `.claude-plugin/plugin.json`, `pyprojec
 - Cache contents. The installed plugin is a cached copy of the repository. The skill's documentation links and the installer rewrite need `docs/` (and the Python package and `scripts/`) to be present in that copy, which holds when the whole repository is the plugin root. The exact cache layout was not observed.
 - Root `CLAUDE.md`. The plugin docs say a `CLAUDE.md` at a plugin root is not loaded as context and that `claude plugin validate` warns about it. This repository keeps a short `CLAUDE.md` for its own development sessions, so expect that warning; it does not affect the skill or the agent.
 - Field support. Whether the user's Claude Code version accepts every manifest and agent field used here.
-- Source quality. The format facts were read from official pages through model-based extraction, not raw HTML. See [research-verify.md](specs/milestones/v0.15.0/research-verify.md).
+- Source quality. The format facts were read from official pages through model-based extraction, not raw HTML. See [research-verify.md](specs/milestones/v0.0.15/research-verify.md).
 
 ## What passing checks do not establish
 

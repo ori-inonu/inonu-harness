@@ -44,7 +44,7 @@
       "evidence": [
         {
           "source": "milestone-spec",
-          "reference": "docs/specs/milestones/v0.3.0/spec.md#M2-R01",
+          "reference": "docs/specs/milestones/v0.0.3/spec.md#M2-R01",
           "criterion_id": "manual-opt-in",
           "version": "1",
           "provenance": "fixture evidence detail must remain outside the projection"

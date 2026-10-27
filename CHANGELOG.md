@@ -1,8 +1,79 @@
 # Changelog
 
-This changelog prepares release 0.23.0. Earlier entries record repository milestones and do not imply separate published releases or Git tags.
+Notable changes to the Inonu Harness, newest first. Each version below has a [GitHub release](https://github.com/ori-inonu/inonu-harness/releases) with the same notes.
 
-## 0.23.0 — 2026-10-26
+Versions follow the milestone scheme of [docs/versioning.md](docs/versioning.md): a project starts at `0.0.1`, each milestone raises the patch number, minor and patch have at most two digits (so `0.1.0` follows `0.0.99`), and `1.0.0` is the owner's decision. This repository's first 24 milestones were numbered `v0.N.0` while they were built and were renumbered to `v0.0.N`; the Git history, Jev spec ids and receipts keep the old numbers, and the table in the versioning guide translates them.
+
+A release tag marks the **first commit that contains the milestone's folder**. Several early milestones were committed together, so their tags share a commit; the notes of each release say so.
+
+Sections: **Added** (new behaviour), **Changed** (existing behaviour or rules), **Fixed**, and **Limits** (what the change does not establish or does not cover).
+
+## Releases at a glance
+
+| Version | First committed | Summary | Release |
+| --- | --- | --- | --- |
+| [0.0.24](#0024--2026-10-26) | 2026-10-26 | The `v0.0.N` milestone scheme, a manifest version check and SKILL.md size limits. | [v0.0.24](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.24) |
+| [0.0.23](#0023--2026-10-26) | 2026-10-26 | `jev spec` sends a document's text as the judge's facts. | [v0.0.23](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.23) |
+| [0.0.22](#0022--2026-10-26) | 2026-10-26 | An `ownership` value per item: ours, modified, foreign, none or unknown. | [v0.0.22](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.22) |
+| [0.0.21](#0021--2026-10-26) | 2026-10-26 | `decisions ready` lists pending decisions whose dependencies are authorized. | [v0.0.21](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.21) |
+| [0.0.20](#0020--2026-10-26) | 2026-10-26 | An opt-in `hook stop` that runs a trusted verifier config and can block a stop. | [v0.0.20](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.20) |
+| [0.0.19](#0019--2026-10-26) | 2026-10-26 | `--refuse-secret-patterns` for decision context and task packets. | [v0.0.19](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.19) |
+| [0.0.18](#0018--2026-10-26) | 2026-10-26 | `decisions as-of` shows a decision as it was at a given time. | [v0.0.18](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.18) |
+| [0.0.17](#0017--2026-10-26) | 2026-10-26 | `check --ref` verifies a commit's own blobs instead of the working tree. | [v0.0.17](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.17) |
+| [0.0.16](#0016--2026-10-26) | 2026-10-26 | A read-only `docs lint` for instruction files, links and imports. | [v0.0.16](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.16) |
+| [0.0.15](#0015--2026-10-26) | 2026-10-26 | A plugin package and marketplace at the repository root. | [v0.0.15](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.15) |
+| [0.0.14](#0014--2026-10-26) | 2026-10-26 | `loop run`, which stops on verifier exit codes under four mandatory limits. | [v0.0.14](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.14) |
+| [0.0.13](#0013--2026-10-26) | 2026-10-26 | An opt-in `--max-regression` gate on `baseline compare`. | [v0.0.13](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.13) |
+| [0.0.12](#0012--2026-10-26) | 2026-10-26 | `bundle apply` and `bundle remove`, with an ownership ledger, backups and rollback. | [v0.0.12](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.12) |
+| [0.0.11](#0011--2026-10-26) | 2026-10-26 | A read-only `bundle status` for the planned bundle items. | [v0.0.11](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.11) |
+| [0.0.10](#0010--2026-10-26) | 2026-10-26 | `check` compiles and runs the unit tests, and prints one JSON summary. | [v0.0.10](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.10) |
+| [0.0.9](#009--2026-10-26) | 2026-10-26 | `scripts/inonu.py` and native skill profiles for Codex and Claude Code. | [v0.0.9](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.9) |
+| [0.0.8](#008--2026-10-26) | 2026-10-26 | `sdd audit` over a strict manifest, with hardened evidence reading. | [v0.0.8](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.8) |
+| [0.0.7](#007--2026-10-26) | 2026-10-26 | The doctor reports a CodeGraph license only when the npm package identity agrees. | [v0.0.7](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.7) |
+| [0.0.6](#006--2026-10-25) | 2026-10-25 | Research snapshots and an offline evaluation design; nothing was executed. | [v0.0.6](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.6) |
+| [0.0.5](#005--2026-10-25) | 2026-10-25 | `decisions packet` with explicit ids, and duplicate-key rejection. | [v0.0.5](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.5) |
+| [0.0.4](#004--2026-10-25) | 2026-10-25 | An exploratory evaluation protocol for persistent context; the pilot was not run. | [v0.0.4](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.4) |
+| [0.0.3](#003--2026-10-25) | 2026-10-25 | The manual `decisions context` command over an existing database. | [v0.0.3](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.3) |
+| [0.0.2](#002--2026-10-25) | 2026-10-25 | A read-only decision context adapter for explicitly chosen decision ids. | [v0.0.2](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.2) |
+| [0.0.1](#001--2026-10-25) | 2026-10-25 | Environment doctor, offline baseline runner, SQLite Decision Graph and a typed Jev adapter. | [v0.0.1](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.1) |
+
+## 0.0.24 — 2026-10-26
+
+**Release:** [v0.0.24](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.24) · **Milestone folder:** [docs/specs/milestones/v0.0.24](docs/specs/milestones/v0.0.24/)
+
+### Added
+
+- `python -m inonu_harness.versions [--root DIR]` checks that the package version is the same in `inonu_harness/__init__.py`, `pyproject.toml` and `.claude-plugin/plugin.json`, and in `.claude-plugin/marketplace.json` when that file states a version. A manifest that does not exist is skipped. Each problem is one line on stderr that names the files and the versions; the command exits 0 when they agree and 1 otherwise. A manifest that cannot be read or parsed, or that has no version, is a problem. A root that is not a directory exits 2. It reads files only and never imports the package.
+- `check` runs the same comparison as a `versions` step between `compile` and `tests`, in the checked directory and, with `--ref`, in the temporary export. The report format and the other steps are unchanged.
+- `docs lint` also reads each `SKILL.md` below `skills/`. A skill of 20,000 bytes or more gets `skill_file_too_large`, and one of 500 lines or more gets `skill_file_too_long`; each has a remediation sentence. Its links are checked from its own folder. A directory link that leaves the root is reported and not read, as under `docs/`. The limits are the constants `SKILL_MAX_BYTES` and `SKILL_MAX_LINES`.
+- `tests/test_versions.py` covers the comparison, the exit codes and output of `main`, the `versions` step with and without manifests and with `--ref`, and this repository. `tests/test_docs_lint.py` covers the skill rules.
+- The milestone version scheme, as a global concept for any project, in [docs/versioning.md](docs/versioning.md). Each part of `0.MINOR.PATCH` is 0 to 99 without leading zeros, and `0.0.0` is not a version. Milestone `n` is `0.(n // 100).(n % 100)`, so milestone 24 is `0.0.24` and milestone 100 is `0.1.0`. `python -m inonu_harness version [--root DIR] [--scheme] [--next]` runs the same code as `python -m inonu_harness.versions`, with the same exit codes. `--scheme` also requires every stated version to be in the scheme. `--next` prints the next milestone's version on stdout (`0.0.25` after `0.0.24`, `0.1.0` after `0.0.99`) and exits 1, with the problem lines, when the manifests disagree, leave the scheme, state no version or state `0.99.99`, the last version of the scheme. The command never edits a manifest, and `1.0.0` is the owner's decision.
+- The `versions` step of `check` runs with `--scheme`, so this repository cannot leave the scheme. A checkout without manifests still passes.
+- The installed skill states the rule in its description and the two commands in a bullet. [docs/versioning.md](docs/versioning.md) covers the milestone directory `docs/specs/milestones/vMAJOR.MINOR.PATCH`, one version in every manifest, how an existing project adopts the scheme, and the table of old and new numbers for this repository.
+
+### Changed
+
+- The version assertions in `tests/test_check_bundle.py` and `tests/test_host_profiles.py` compare with `inonu_harness.__version__` or with the manifest under test, not with a literal. A release edits the three manifests and nothing else.
+- Test checkouts that run `check` include `inonu_harness/versions.py`, because the new step runs that module.
+- `--max-bytes` and `--max-lines` still apply only to the instruction files. The skill limits are fixed by the constants above.
+- Earlier milestones of this repository are renumbered from `v0.N.0` to `v0.0.N`, for N from 1 to 24: the milestone directories under `docs/specs/milestones` (`v0.0.1` to `v0.0.24`), and the references in docs, tests, manifests and fixtures. Git commit messages, Jev spec ids such as `inonu-v021-small-gaps` and receipts keep the numbers they were written with, and the git history was not rewritten.
+- The review of the first version audit and skill size rule found the cases below. Each now has a test. A `__version__` line inside a docstring or comment is not a statement, while a trailing comment, single quotes and an annotation are read. A byte order mark is accepted. Duplicate JSON keys and deeply nested JSON are problem lines. A manifest that is unreadable, larger than 1 MiB or a directory is a problem line, not a crash. A skill is measured in bytes, and its file name matches in any case. A `skills/` folder that cannot be listed is reported as `directory_unreadable`. A `skills/` folder or a `SKILL.md` that links outside the root is reported as `link_escapes_root`, and a folder link inside the root is read at its real place.
+
+### Limits
+
+- The comparison reads text and parsed data only. It does not check git tags, an installed plugin cache or any other file that states a version. A release that changes only one manifest is caught only while another manifest still states the old value.
+- A checkout without `inonu_harness/versions.py`, such as an older commit checked with `--ref`, fails the `versions` step, because the step runs that module.
+- The skill limits are starting points taken from the superpowers size test and the Claude Code skills documentation, not measured optima. Only `SKILL.md` files are read under `skills/`; other Markdown there is not linted.
+- Versions are compared as exact text: `0.0.24.0`, `v0.0.24` and `0.0.24 ` do not match `0.0.24`, and the scheme accepts only the plain `0.MINOR.PATCH` form. A version is at most 40 characters; a longer one is reported as having no usable version.
+- `python -m inonu_harness.versions` imports the package `inonu_harness` before it runs, because Python runs the package's `__init__` for `-m`. The audit itself reads files only and never imports the package.
+- The audit reads `__version__` from source text. It accepts one form: a top-level assignment of a plain string, with a trailing comment, single quotes or an annotation allowed; the last one wins. Any other way of binding the name (in a block, a tuple, a loop, an import, a function, `del`, `+=`) makes the version unusable, and so does an f-string or a computed value. A value set at run time, for example through `globals()`, is invisible to it.
+- A link to a folder below `docs/` or `skills/` is read at its real place and is not listed twice. A link below `skills/` or `docs/` to a folder elsewhere inside the root is followed and the findings name the path through the link. A link to a folder outside the root is reported as `link_escapes_root` and is not read. A folder that cannot be listed is reported as `directory_unreadable`, and a file that cannot be read as `file_unreadable`.
+- A manifest reached through a link that leaves the checked root is refused, and the problem line does not echo what it holds.
+- `audit.json` of milestone v0.0.8 pins the bytes of three files. The renumbering edited them, so the three hashes were refreshed once, and a test now runs that recorded audit so that the next edit to those files cannot silently break it.
+
+## 0.0.23 — 2026-10-26
+
+**Release:** [v0.0.23](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.23) · **Milestone folder:** [docs/specs/milestones/v0.0.23](docs/specs/milestones/v0.0.23/)
 
 ### Added
 
@@ -14,7 +85,7 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 
 ### Changed
 
-- Version 0.23.0 in `inonu_harness/__init__.py`, `pyproject.toml`, `.claude-plugin/plugin.json` and the version assertions in the tests.
+- Version 0.0.23 in `inonu_harness/__init__.py`, `pyproject.toml`, `.claude-plugin/plugin.json` and the version assertions in the tests.
 
 ### Limits
 
@@ -25,7 +96,9 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 - `--max-facts` is a local budget. Jev does not limit the number of facts in practice (see [docs/integrations.md](docs/integrations.md)).
 - The symbolic-link refusal is tested with a patched `Path.is_symlink`, because the Windows host used for this release could not create a link. A real link was not exercised here.
 
-## 0.22.0 — 2026-10-26
+## 0.0.22 — 2026-10-26
+
+**Release:** [v0.0.22](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.22) · **Milestone folder:** [docs/specs/milestones/v0.0.22](docs/specs/milestones/v0.0.22/)
 
 ### Added
 
@@ -39,7 +112,7 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 - `bundle status` keeps every existing key, every `state` value and `summary`. It now reads the ledger as well, and still writes nothing.
 - A skill file that exists but cannot be read is now reported as `unknown` by `bundle status` and `bundle plan`, instead of making them exit 2 with no output. `bundle apply` is unchanged.
 - A ledger whose `schema_version` is `true` or `1.0` is now refused as a wrong schema by `status`, `apply` and `remove` alike; it was read as valid. A ledger that `bundle apply` wrote always has the integer 1, so nothing a real ledger holds changes.
-- Version 0.22.0 in `inonu_harness/__init__.py`, `pyproject.toml`, `.claude-plugin/plugin.json` and the version assertions in the tests.
+- Version 0.0.22 in `inonu_harness/__init__.py`, `pyproject.toml`, `.claude-plugin/plugin.json` and the version assertions in the tests.
 
 ### Limits
 
@@ -48,7 +121,9 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 - A Codex block whose line endings changed is `modified`, as `apply` reports it as a conflict.
 - The skill's `ownership` looks at `SKILL.md` alone, while its `state` also checks the metadata file: a skill whose metadata file was deleted shows `state` `conflict` and `ownership` `ours`.
 
-## 0.21.0 — 2026-10-26
+## 0.0.21 — 2026-10-26
+
+**Release:** [v0.0.21](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.21) · **Milestone folder:** [docs/specs/milestones/v0.0.21](docs/specs/milestones/v0.0.21/)
 
 ### Added
 
@@ -60,7 +135,7 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 
 ### Changed
 
-- Version 0.21.0 in `inonu_harness/__init__.py`, `pyproject.toml`, `.claude-plugin/plugin.json` and the version assertions in the tests.
+- Version 0.0.21 in `inonu_harness/__init__.py`, `pyproject.toml`, `.claude-plugin/plugin.json` and the version assertions in the tests.
 
 ### Limits
 
@@ -69,7 +144,9 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 - The output includes each decision's question text, as `show` does, and does not scan for credentials. It has no `--refuse-secret-patterns` option, so review the output before attaching it to an agent.
 - The answer is computed on each read. No readiness flag is stored, so nothing can drift from the decisions it describes.
 
-## 0.20.0 — 2026-10-26
+## 0.0.20 — 2026-10-26
+
+**Release:** [v0.0.20](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.20) · **Milestone folder:** [docs/specs/milestones/v0.0.20](docs/specs/milestones/v0.0.20/)
 
 ### Added
 
@@ -99,7 +176,9 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 - An unledgered legacy Stop hook (a command ending in ` check`) cannot be removed by `bundle remove`, which reports a conflict; delete it by hand.
 - The end-to-end run uses the hook's own stdin contract. A live Claude Code session has not been observed blocking a stop.
 
-## 0.19.0 — 2026-10-26
+## 0.0.19 — 2026-10-26
+
+**Release:** [v0.0.19](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.19) · **Milestone folder:** [docs/specs/milestones/v0.0.19](docs/specs/milestones/v0.0.19/)
 
 ### Added
 
@@ -118,7 +197,9 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 - With the flag, the requested ids are scanned before the lookup, because the existing "decision not found" error would otherwise echo a token-shaped id.
 - A credential split across fields, list items or the task id and prompt is not joined, so each half is printed.
 
-## 0.18.0 — 2026-10-26
+## 0.0.18 — 2026-10-26
+
+**Release:** [v0.0.18](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.18) · **Milestone folder:** [docs/specs/milestones/v0.0.18](docs/specs/milestones/v0.0.18/)
 
 ### Added
 
@@ -135,7 +216,9 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 - The database file is never modified. A database that an outside tool switched to WAL mode may get `-wal` and `-shm` helper files created by SQLite when it is opened, as `decisions context` already does; the store never enables WAL itself.
 - The output is ASCII-escaped, and an unreadable history record now gives exit 2 with a generic message for every decisions command instead of a traceback.
 
-## 0.17.0 — 2026-10-26
+## 0.0.17 — 2026-10-26
+
+**Release:** [v0.0.17](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.17) · **Milestone folder:** [docs/specs/milestones/v0.0.17](docs/specs/milestones/v0.0.17/)
 
 ### Added
 
@@ -148,12 +231,14 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 
 ### Limits
 
-- The check covers the operating system where it runs only. It is not verified on other systems. The CI workflow is unchanged in this release (decision D1 in the v0.17.0 milestone), so a three-system CI run is deferred.
+- The check covers the operating system where it runs only. It is not verified on other systems. The CI workflow is unchanged in this release (decision D1 in the v0.0.17 milestone), so a three-system CI run is deferred.
 - A pass shows that the commit is self-contained for its compile step, its unit tests and its runner. It does not show that the plugin installs, that a host loads the skill or agent, or that the code is correct.
 - The export holds the commit's blobs exactly as stored: `export-ignore`, `export-subst` and `core.autocrlf` do not apply, submodule entries are skipped and a symlink becomes a plain file holding its target text. All blobs are held in memory once. Uncommitted and ignored files are never read.
 - The 60-second limit covers git calls only. The compile and test steps have no time limit, as before.
 
-## 0.16.0 — 2026-10-26
+## 0.0.16 — 2026-10-26
+
+**Release:** [v0.0.16](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.16) · **Milestone folder:** [docs/specs/milestones/v0.0.16](docs/specs/milestones/v0.0.16/)
 
 ### Added
 
@@ -172,13 +257,15 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 - Link matching is case-exact and reports backslash targets on every host, so a link that only works on Windows or macOS is a finding. Links that span lines, escaped brackets and indented (non-fenced) code are not modelled. Directory links are not followed; one that leaves the root is reported.
 - There is no documentation-gardening agent and no quality-score document. A stale claim passes the lint unless it breaks a link or size rule, and nothing opens a correction.
 - The architecture test checks imports only. It does not test behavior or any other structural rule.
-- The research source is one vendor's article (OpenAI), read in a browser pane and not independently evaluated. It describes one team's experience and does not measure how much each practice contributes; see [research-verify.md](docs/specs/milestones/v0.16.0/research-verify.md).
+- The research source is one vendor's article (OpenAI), read in a browser pane and not independently evaluated. It describes one team's experience and does not measure how much each practice contributes; see [research-verify.md](docs/specs/milestones/v0.0.16/research-verify.md).
 
-## 0.15.0 — 2026-10-26
+## 0.0.15 — 2026-10-26
+
+**Release:** [v0.0.15](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.15) · **Milestone folder:** [docs/specs/milestones/v0.0.15](docs/specs/milestones/v0.0.15/)
 
 ### Added
 
-- An installable Claude Code plugin at the repository root: `.claude-plugin/plugin.json` (name `inonu-harness`, version `0.15.0`) and `.claude-plugin/marketplace.json`, with the repository as its own marketplace. Install with `/plugin marketplace add ori-inonu/inonu-harness` and `/plugin install inonu-harness@inonu-harness`.
+- An installable Claude Code plugin at the repository root: `.claude-plugin/plugin.json` (name `inonu-harness`, version `0.0.15`) and `.claude-plugin/marketplace.json`, with the repository as its own marketplace. Install with `/plugin marketplace add ori-inonu/inonu-harness` and `/plugin install inonu-harness@inonu-harness`.
 - The plugin carries the `inonu-harness` skill, the `inonu-worker` agent (`model: haiku`) and the standard-library runner `scripts/inonu.py` with the `inonu_harness` package.
 - The skill calls the runner as `python "${CLAUDE_PLUGIN_ROOT}/scripts/inonu.py"`. `scripts/configure_hosts.py` and `bundle apply` replace that token with the absolute runner command in the copies they write, so those copies contain no placeholder.
 - Structural tests in `tests/test_plugin.py` check the manifests, frontmatter and layout without the Claude CLI.
@@ -195,7 +282,9 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 - A `CLAUDE.md` at the plugin root is not loaded as context and `claude plugin validate` warns about it.
 - Passing the structural tests does not establish installation, reachability or agent quality. The plugin is not listed in any directory.
 
-## 0.14.0 — 2026-10-26
+## 0.0.14 — 2026-10-26
+
+**Release:** [v0.0.14](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.14) · **Milestone folder:** [docs/specs/milestones/v0.0.14](docs/specs/milestones/v0.0.14/)
 
 ### Added
 
@@ -218,9 +307,11 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 - The `step` command is the caller's choice and may call a model or a paid service, so it may cost money.
 - The log is not tamper-proof: a step runs with the caller's permissions and can edit it.
 - No host hook is generated or installed. The loop does not write a Claude Code Stop hook or any other host configuration.
-- Research gaps for the hook and loop designs remain open (the OpenAI primary page, the SubagentStop and `onFailure` text, and whether `stop_hook_active` resets); see [research-verify.md](docs/specs/milestones/v0.14.0/research-verify.md).
+- Research gaps for the hook and loop designs remain open (the OpenAI primary page, the SubagentStop and `onFailure` text, and whether `stop_hook_active` resets); see [research-verify.md](docs/specs/milestones/v0.0.14/research-verify.md).
 
-## 0.13.0 — 2026-10-26
+## 0.0.13 — 2026-10-26
+
+**Release:** [v0.0.13](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.13) · **Milestone folder:** [docs/specs/milestones/v0.0.13](docs/specs/milestones/v0.0.13/)
 
 ### Added
 
@@ -236,7 +327,9 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 - Skipped metrics never count as a pass or a regression, except that a judged metric whose measurement source changed makes the gate `incomparable` rather than `pass`.
 - Duplicate JSON keys are rejected only when the flag is given, so reading without the gate is unchanged.
 
-## 0.12.0 — 2026-10-26
+## 0.0.12 — 2026-10-26
+
+**Release:** [v0.0.12](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.12) · **Milestone folder:** [docs/specs/milestones/v0.0.12](docs/specs/milestones/v0.0.12/)
 
 ### Added
 
@@ -259,9 +352,11 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 - Directories created by a run that fails midway are removed only if they are empty and listed as created by the bundle.
 - `configured` means the host file contains the key. It does not prove that the server is reachable or that a hook runs.
 - Apply and remove do not install the tools themselves (CodeGraph, Headroom, Node).
-- The write of host configuration is authorized by the owner; the record is in `docs/specs/milestones/v0.11.0/decisions.md` (D2).
+- The write of host configuration is authorized by the owner; the record is in `docs/specs/milestones/v0.0.11/decisions.md` (D2).
 
-## 0.11.0 — 2026-10-26
+## 0.0.11 — 2026-10-26
+
+**Release:** [v0.0.11](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.11) · **Milestone folder:** [docs/specs/milestones/v0.0.11](docs/specs/milestones/v0.0.11/)
 
 ### Added
 
@@ -270,9 +365,11 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 ### Limits
 
 - `bundle status` is read-only. `configured` and `present` describe what a host file contains; they do not prove that an MCP server is reachable or that a hook runs. `accessibility` stays `unknown`.
-- Install and remove commands for hooks, MCP registrations and agent files move to v0.12.0 and still require explicit owner authorization.
+- Install and remove commands for hooks, MCP registrations and agent files move to v0.0.12 and still require explicit owner authorization.
 
-## 0.10.0 — 2026-10-26
+## 0.0.10 — 2026-10-26
+
+**Release:** [v0.0.10](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.10) · **Milestone folder:** [docs/specs/milestones/v0.0.10](docs/specs/milestones/v0.0.10/)
 
 ### Added
 
@@ -280,7 +377,7 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 - A read-only `bundle plan`: `python -m inonu_harness bundle plan [--host codex|claude|both] [--home PATH]` lists the skill status (reusing the v0.9 host profile logic), a Claude worker agent source, a stop-hook settings snippet that would run `check`, and complementary MCP server entries. Every non-skill item reports `"applied": false`.
 - A worker agent source at `agents/inonu-worker.md` with `model: haiku`, bounded to one ticket, without nested delegation or Jev calls, and required to run `check` before reporting done.
 - An `inonu` console script declared in `pyproject.toml` that points to `inonu_harness.cli:main`. No dependency was added.
-- Research and decision records for this slice are in `docs/specs/milestones/v0.10.0/research.md` and `docs/specs/milestones/v0.10.0/decisions.md`.
+- Research and decision records for this slice are in `docs/specs/milestones/v0.0.10/research.md` and `docs/specs/milestones/v0.0.10/decisions.md`.
 
 ### Limits
 
@@ -288,7 +385,9 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 - `check` verifies only this checkout layout (`inonu_harness`, `scripts` and `tests`). A passing result is deterministic evidence for those steps, not proof of semantic correctness or of host behavior.
 - Haiku adequacy for the worker agent has not been evaluated; the `model: haiku` setting is a configuration choice, not a measured result.
 
-## 0.9.0 — 2026-10-26
+## 0.0.9 — 2026-10-26
+
+**Release:** [v0.0.9](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.9) · **Milestone folder:** [docs/specs/milestones/v0.0.9](docs/specs/milestones/v0.0.9/)
 
 ### Added
 
@@ -307,40 +406,73 @@ This changelog prepares release 0.23.0. Earlier entries record repository milest
 - The profile helper does not configure MCP servers, plugins, credentials, hooks, permissions, providers, or global agent instructions. It is not evidence of universal host activation.
 - Inonu complements existing tools. It does not provide CodeGraph symbol navigation, RTK terminal filtering, Headroom context compression, or Ponytail coding guidance. No real-task benchmark shows that Inonu alone is superior to those tools.
 
-## Earlier implementation milestones
+## 0.0.8 — 2026-10-26
 
-### M0 — Local foundation
+**Release:** [v0.0.8](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.8) · **Milestone folder:** [docs/specs/milestones/v0.0.8](docs/specs/milestones/v0.0.8/)
 
-- Added a sanitized, read-only environment doctor; an offline baseline runner and comparison; and a local SQLite Decision Graph with revisions, evidence, dependencies, idempotency, and distinct recommendation and authorization records.
-- Added a typed JEV adapter over an injected MCP transport and a deterministic mock. This is not a portable live JEV transport or proof of JEV availability in another client or session.
-
-### M1–M2 — Explicit decision context and CLI
-
-- Added an opt-in, read-only decision context adapter that returns an allowlisted projection for caller-selected IDs.
-- Added the manual `decisions context` CLI command, which reads an existing schema-v1 database without creating or changing it. Fixture checks verify the output contract; they do not measure agent quality, productivity, or speed.
-
-### M3 — Exploratory evaluation protocol
-
-- Documented a proposed text-only pilot comparing the same task with and without explicit decision context. The protocol preserves the existing eight SDD stages and specifies observable criteria and missing-value handling.
-- The pilot has not been run. The protocol provides no evidence of a general effect on agent outcomes.
-
-### M4 — Manual task packets and duplicate-key rejection
-
-- Added `decisions packet` to combine caller-provided task JSON with decisions selected by explicit IDs, using the existing read-only projection. The caller reviews and attaches the output; it is not injected automatically.
-- The packet reader rejects duplicate JSON object keys, extra fields, and invalid task values. This hardening is specific to the task packet input.
-
-### v0.6.0 — Research and proposals
-
-- Recorded research snapshots and proposals for offline artifact-handoff evaluation, with synthetic case and rubric designs that preserve the eight SDD stages.
-- This milestone is research and design only: the proposed corpus and agent evaluation were not executed, and no candidate tool or adaptive router was adopted from the research.
-
-### v0.7.0 — CodeGraph package provenance
-
-- The doctor reports a local CodeGraph license only when the global npm package identity, version, repository, declared license, and executable location agree. Unverified layouts and mismatches remain `unknown`; local paths and raw package metadata stay out of the report.
-- This probe does not establish MCP reachability or active-session use.
-
-### v0.8.0 — SDD artifact audit and safety repairs
+### Added
 
 - Added the optional, read-only `sdd audit` command for a strict v1 manifest. It checks declared requirement, task, verification, and evidence links and hashes files under the selected root.
 - Synthetic fixtures exercise passing, failing, and adversarial inputs. The audit does not interpret document meaning, authenticate that a check ran, execute checks, or grant authorization.
 - Hardened evidence access against unsafe paths and file substitution while keeping reports sanitized. Platform-specific tests remain skipped where their POSIX conditions are unavailable.
+
+## 0.0.7 — 2026-10-26
+
+**Release:** [v0.0.7](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.7) · **Milestone folder:** [docs/specs/milestones/v0.0.7](docs/specs/milestones/v0.0.7/)
+
+### Added
+
+- The doctor reports a local CodeGraph license only when the global npm package identity, version, repository, declared license, and executable location agree. Unverified layouts and mismatches remain `unknown`; local paths and raw package metadata stay out of the report.
+- This probe does not establish MCP reachability or active-session use.
+
+## 0.0.6 — 2026-10-25
+
+**Release:** [v0.0.6](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.6) · **Milestone folder:** [docs/specs/milestones/v0.0.6](docs/specs/milestones/v0.0.6/)
+
+### Added
+
+- Recorded research snapshots and proposals for offline artifact-handoff evaluation, with synthetic case and rubric designs that preserve the eight SDD stages.
+- This milestone is research and design only: the proposed corpus and agent evaluation were not executed, and no candidate tool or adaptive router was adopted from the research.
+
+## 0.0.5 — 2026-10-25
+
+**Release:** [v0.0.5](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.5) · **Milestone folder:** [docs/specs/milestones/v0.0.5](docs/specs/milestones/v0.0.5/)
+
+### Added
+
+- Added `decisions packet` to combine caller-provided task JSON with decisions selected by explicit IDs, using the existing read-only projection. The caller reviews and attaches the output; it is not injected automatically.
+- The packet reader rejects duplicate JSON object keys, extra fields, and invalid task values. This hardening is specific to the task packet input.
+
+## 0.0.4 — 2026-10-25
+
+**Release:** [v0.0.4](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.4) · **Milestone folder:** [docs/specs/milestones/v0.0.4](docs/specs/milestones/v0.0.4/)
+
+### Added
+
+- Documented a proposed text-only pilot comparing the same task with and without explicit decision context. The protocol preserves the existing eight SDD stages and specifies observable criteria and missing-value handling.
+- The pilot has not been run. The protocol provides no evidence of a general effect on agent outcomes.
+
+## 0.0.3 — 2026-10-25
+
+**Release:** [v0.0.3](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.3) · **Milestone folder:** [docs/specs/milestones/v0.0.3](docs/specs/milestones/v0.0.3/)
+
+### Added
+
+- Added the manual `decisions context` CLI command, which reads an existing schema-v1 database without creating or changing it. Fixture checks verify the output contract; they do not measure agent quality, productivity, or speed.
+
+## 0.0.2 — 2026-10-25
+
+**Release:** [v0.0.2](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.2) · **Milestone folder:** [docs/specs/milestones/v0.0.2](docs/specs/milestones/v0.0.2/)
+
+### Added
+
+- Added an opt-in, read-only decision context adapter that returns an allowlisted projection for caller-selected IDs.
+
+## 0.0.1 — 2026-10-25
+
+**Release:** [v0.0.1](https://github.com/ori-inonu/inonu-harness/releases/tag/v0.0.1) · **Milestone folder:** [docs/specs/milestones/v0.0.1](docs/specs/milestones/v0.0.1/)
+
+### Added
+
+- Added a sanitized, read-only environment doctor; an offline baseline runner and comparison; and a local SQLite Decision Graph with revisions, evidence, dependencies, idempotency, and distinct recommendation and authorization records.
+- Added a typed JEV adapter over an injected MCP transport and a deterministic mock. This is not a portable live JEV transport or proof of JEV availability in another client or session.

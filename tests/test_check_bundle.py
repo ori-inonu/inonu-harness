@@ -1,5 +1,6 @@
 import importlib
 import json
+import shutil
 import tempfile
 import tomllib
 import unittest
@@ -19,6 +20,9 @@ FAILING_TEST = PASSING_TEST.replace("assertTrue(True)", "assertTrue(False)")
 def make_root(directory: Path, test_source: str = PASSING_TEST) -> Path:
     (directory / "tests").mkdir(parents=True)
     (directory / "tests" / "test_sample.py").write_text(test_source, encoding="utf-8")
+    # The versions step runs `python -m inonu_harness.versions` here; the module alone is enough, with no version statement.
+    (directory / "inonu_harness").mkdir()
+    shutil.copy(REPO_ROOT / "inonu_harness" / "versions.py", directory / "inonu_harness" / "versions.py")
     return directory
 
 
@@ -52,7 +56,9 @@ class CheckTests(unittest.TestCase):
         report = json.loads(output)
         self.assertTrue(report["passed"])
         self.assertEqual(1, report["schema_version"])
-        self.assertEqual([("compile", 0), ("tests", 0)], [(s["name"], s["exit_code"]) for s in report["steps"]])
+        self.assertEqual(
+            [("compile", 0), ("versions", 0), ("tests", 0)], [(s["name"], s["exit_code"]) for s in report["steps"]],
+        )
 
     def test_failing_test_exits_one(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -66,7 +72,6 @@ class CheckTests(unittest.TestCase):
     def test_syntax_error_fails_compile_but_still_runs_tests(self):
         with tempfile.TemporaryDirectory() as directory:
             root = make_root(Path(directory))
-            (root / "inonu_harness").mkdir()
             (root / "inonu_harness" / "broken.py").write_text("def broken(:\n", encoding="utf-8")
             status, output, _ = run_cli("check", "--root", str(root))
         self.assertEqual(1, status)
@@ -139,8 +144,7 @@ class PackagingTests(unittest.TestCase):
         function = getattr(importlib.import_module(module_name), attribute)
         self.assertTrue(callable(function))
         self.assertIs(cli_main, function)
-        self.assertEqual("0.23.0", project["version"])
-        self.assertEqual("0.23.0", __version__)
+        self.assertEqual(__version__, project["version"])
 
 
 if __name__ == "__main__":

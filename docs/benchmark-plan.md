@@ -66,9 +66,9 @@ O teste `tests/test_sdd_audit_cli.py` chama `load_audit_manifest` e `audit_manif
 
 O teste passa esse fixture calculado por `run_fixture` e também pelo comando `baseline run`; ambos mantêm o schema de resultado v1. A proveniência da medida de aceite identifica `local-audit` e referencia o caso. Isso mede resultados do contrato de auditoria sobre fixtures locais, não uma execução de agente. Runtime e modelo, tokens de entrada e saída, e custo permanecem `null`; listas de eventos do fixture não são telemetria. O tempo materializado pelo baseline cobre somente a chamada local de `run_fixture`, não o cálculo anterior do relatório. Os casos são sintéticos, e resultados com hashes válidos não autenticam que verificações tenham sido realmente executadas.
 
-Reproduza esse recorte com `python -m unittest discover -s tests -p test_sdd_audit_cli.py -v`. Para o contrato completo e os limites do relatório, consulte a [especificação v0.8.0](specs/milestones/v0.8.0/spec.md).
+Reproduza esse recorte com `python -m unittest discover -s tests -p test_sdd_audit_cli.py -v`. Para o contrato completo e os limites do relatório, consulte a [especificação v0.0.8](specs/milestones/v0.0.8/spec.md).
 
-## Gate de regressão do baseline (v0.13.0)
+## Gate de regressão do baseline (v0.0.13)
 
 `baseline compare BEFORE AFTER --max-regression R` compara duas medições locais salvas. `R` é um número finito maior ou igual a 0 (`0.10` permite 10% de aumento). O resultado ganha `gate` com `pass`, `fail` ou `incomparable`, e o processo sai com 0, 1 ou 2. Uma regressão certa sempre vence (`fail`); se nenhuma for certa e a fonte de medição de uma métrica julgada mudou, o gate é `incomparable`. Arquivos ilegíveis, chaves JSON duplicadas e `R` inválido saem com 2 sem `gate`. A comparação usa aritmética decimal exata.
 

@@ -18,6 +18,7 @@ NEEDS_EXTRA = PASSING_TEST.replace("import unittest\n", "import unittest\n\nfrom
     "assertTrue(True)", "assertTrue(extra.VALUE)"
 )
 RUNNER = 'print("inonu-harness test")\n'
+VERSIONS_SOURCE = (Path(__file__).resolve().parents[1] / "inonu_harness" / "versions.py").read_text(encoding="utf-8")
 
 
 def run_cli(*arguments: str) -> tuple[int, str, str]:
@@ -44,8 +45,11 @@ def write_files(root: Path, files: dict[str, str]) -> None:
 
 
 def project(test_source: str = PASSING_TEST) -> dict[str, str]:
-    """The smallest layout that `check` accepts: one test, the runner script and the package."""
-    return {"tests/test_ok.py": test_source, "scripts/inonu.py": RUNNER, "inonu_harness/__init__.py": ""}
+    """The smallest layout that `check` accepts: one test, the runner script, the package and its version audit."""
+    return {
+        "tests/test_ok.py": test_source, "scripts/inonu.py": RUNNER,
+        "inonu_harness/__init__.py": '__version__ = "0.0.1"\n', "inonu_harness/versions.py": VERSIONS_SOURCE,
+    }
 
 
 def steps_of(output: str) -> dict[str, int]:
@@ -70,14 +74,14 @@ class RepoCase(unittest.TestCase):
 
 
 class CheckRefTests(RepoCase):
-    def test_complete_commit_passes_all_three_steps(self):
+    def test_complete_commit_passes_every_step(self):
         status, output, error = self.check_ref()
         self.assertEqual(0, status, error)
         report = json.loads(output)
         self.assertTrue(report["passed"])
         self.assertEqual("HEAD", report["ref"])
         self.assertEqual(
-            [("compile", 0), ("tests", 0), ("runner", 0)],
+            [("compile", 0), ("versions", 0), ("tests", 0), ("runner", 0)],
             [(step["name"], step["exit_code"]) for step in report["steps"]],
         )
 
@@ -148,7 +152,7 @@ class CheckRefTests(RepoCase):
         self.assertEqual(0, status, error)
         report = json.loads(output)
         self.assertNotIn("ref", report)
-        self.assertEqual(["compile", "tests"], [step["name"] for step in report["steps"]])
+        self.assertEqual(["compile", "versions", "tests"], [step["name"] for step in report["steps"]])
 
     def test_subdirectory_root_checks_its_own_tree_at_the_commit(self):
         write_files(self.repo / "sub", project(FAILING_TEST))
