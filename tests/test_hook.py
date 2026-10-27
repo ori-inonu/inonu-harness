@@ -325,7 +325,8 @@ class TrustCommandTests(HookCase):
         (self.home / ".inonu-harness").write_text("a file where the directory belongs", encoding="utf-8")
         code, out, err = run_trust(self.project, self.home, yes=True)
         self.assertEqual((2, ""), (code, out))
-        self.assertIn("could not be written", err)
+        # A path under a plain file reads as absent on Windows and as unreadable on Linux; both exit 2 without writing.
+        self.assertTrue("could not be written" in err or "cannot be read or parsed" in err, err)
 
 
 class ExecutionTests(HookCase):
