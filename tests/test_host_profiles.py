@@ -34,7 +34,7 @@ class HostProfileTests(unittest.TestCase):
                 capture_output=True, text=True, check=False,
             )
         self.assertEqual(0, result.returncode, result.stderr)
-        self.assertEqual("inonu-harness 0.9.0\n", result.stdout)
+        self.assertEqual(f"inonu-harness {__version__}\n", result.stdout)
 
     def test_doctor_accepts_selected_project_root_and_preserves_schema(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -78,7 +78,7 @@ class HostProfileTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stderr)
             status = json.loads(result.stdout)
             self.assertEqual("preview", status["mode"])
-            self.assertEqual("0.9.0", status["version"])
+            self.assertEqual(__version__, status["version"])
             self.assertEqual({"codex", "claude"}, set(status["hosts"]))
             self.assertFalse(home.exists())
             self.assertNotIn(str(home), result.stdout + result.stderr)
@@ -97,7 +97,7 @@ class HostProfileTests(unittest.TestCase):
             codex_before, claude_before = codex_skill.read_bytes(), claude_skill.read_bytes()
             codex_metadata = json.loads((codex_skill.parent / ".inonu-harness.json").read_text(encoding="utf-8"))
             self.assertEqual("inonu-harness.host-profile", codex_metadata["owner"])
-            self.assertEqual("0.9.0", codex_metadata["version"])
+            self.assertEqual(__version__, codex_metadata["version"])
             self.assertEqual(hashlib.sha256(codex_before).hexdigest(), codex_metadata["skill_sha256"])
             self.assertIn("& python " if os.name == "nt" else "python '", codex_before.decode("utf-8"))
             self.assertIn("python '", claude_before.decode("utf-8"))
@@ -169,7 +169,8 @@ class HostProfileTests(unittest.TestCase):
         self.assertIn("../../docs/benchmark-plan.md", source)
 
     def test_version_is_released_version(self):
-        self.assertEqual("0.9.0", __version__)
+        plugin = json.loads((REPO_ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual(__version__, plugin["version"])
 
     def test_host_selection_installs_only_the_requested_profile(self):
         with tempfile.TemporaryDirectory() as directory:

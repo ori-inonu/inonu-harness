@@ -1,0 +1,17 @@
+{
+  "name": "inonu-harness",
+  "version": "0.0.24",
+  "description": "Local-first diagnostics, deterministic baselines, and decision history",
+  "author": {
+    "name": "Inonu Harness"
+  },
+  "homepage": "https://github.com/ori-inonu/inonu-harness",
+  "repository": "https://github.com/ori-inonu/inonu-harness",
+  "keywords": [
+    "harness",
+    "sdd",
+    "diagnostics",
+    "baseline",
+    "decisions"
+  ]
+}

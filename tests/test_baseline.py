@@ -23,7 +23,7 @@ class BaselineRunnerTests(unittest.TestCase):
             FIXTURE,
             execution_id="run-offline-001",
             clock=FixedClock(100.0, 100.125),
-            version_source=lambda: {"python": "3.test", "inonu-harness": "0.1.0"},
+            version_source=lambda: {"python": "3.test", "inonu-harness": "0.0.1"},
         )
 
         self.assertEqual(result["schema_version"], 1)
@@ -33,7 +33,7 @@ class BaselineRunnerTests(unittest.TestCase):
         self.assertEqual(result["metrics"]["elapsed_seconds"]["value"], 0.125)
         self.assertEqual(
             result["metrics"]["component_versions"]["value"],
-            {"python": "3.test", "inonu-harness": "0.1.0"},
+            {"python": "3.test", "inonu-harness": "0.0.1"},
         )
 
     def test_every_measurement_has_a_source_and_unobserved_values_are_null(self):

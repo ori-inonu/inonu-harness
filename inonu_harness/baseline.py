@@ -10,9 +10,11 @@ import argparse
 import json
 import math
 import platform
+import sys
 import time
 import uuid
 from collections.abc import Callable, Mapping
+from decimal import Decimal, localcontext
 from pathlib import Path
 from typing import Any
 
@@ -63,6 +65,12 @@ _FIXTURE_MEASUREMENT_FIELDS = {
     "blocks",
     "recoveries",
 }
+
+
+GATE_EXIT_CODES = {"pass": 0, "fail": 1, "incomparable": 2}
+_GATED_COUNTS = ("tool_calls", "failures", "blocks")
+_GATED_AMOUNTS = ("input_tokens", "output_tokens", "cost_usd")
+_GATED_METRICS = ("acceptance", *_GATED_COUNTS, *_GATED_AMOUNTS)
 
 
 def run_fixture(
@@ -182,12 +190,114 @@ def compare_runs(before: Mapping[str, Any], after: Mapping[str, Any]) -> dict[st
     return base
 
 
-def _load_fixture(fixture: str | Path | Mapping[str, Any]) -> dict[str, Any]:
+def gate_comparison(
+    before: Mapping[str, Any],
+    after: Mapping[str, Any],
+    comparison: Mapping[str, Any],
+    max_regression: float,
+) -> dict[str, Any]:
+    """Judge a ``compare_runs`` result for regressions; pure and deterministic.
+
+    ``before`` and ``after`` must be the results that produced ``comparison``.
+    Only ``compared`` metrics the gate judges can fail it; every other metric
+    is listed under ``skipped`` with its reason.
+    """
+
+    limit = _max_regression(max_regression)
+    if comparison.get("compatible") is not True:
+        return {
+            "max_regression": limit,
+            "status": "incomparable",
+            "regressions": [],
+            "skipped": [{"metric": name, "reason": comparison.get("reason")} for name in _METRIC_UNITS],
+        }
+
+    regressions: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    unjudgeable = False
+    for name in _METRIC_UNITS:
+        result = comparison["comparisons"].get(name, {})
+        if result.get("status") != "compared":
+            skipped.append({"metric": name, "reason": result.get("reason")})
+            # A changed measurement basis hides a possible regression; an unavailable value is just absent.
+            unjudgeable = unjudgeable or (name in _GATED_METRICS and result.get("reason") == "source_incompatible")
+        elif name not in _GATED_METRICS:
+            skipped.append({"metric": name, "reason": "not_judged"})
+        elif name == "acceptance":
+            regressions.extend(_acceptance_regressions(before, after))
+        else:
+            old, new = _gated_amount(before, name), _gated_amount(after, name)
+            if _exceeds(old, new, limit):
+                regressions.append(
+                    {
+                        "metric": name,
+                        "before": old,
+                        "after": new,
+                        "reason": "increase_from_zero" if old == 0 else "exceeds_max_regression",
+                    }
+                )
+    return {
+        "max_regression": limit,
+        "status": "fail" if regressions else ("incomparable" if unjudgeable else "pass"),
+        "regressions": regressions,
+        "skipped": skipped,
+    }
+
+
+def _acceptance_regressions(before: Mapping[str, Any], after: Mapping[str, Any]) -> list[dict[str, Any]]:
+    after_passed: dict[str, bool] = {}
+    for item in after["metrics"]["acceptance"]["value"]:
+        after_passed[item["id"]] = after_passed.get(item["id"], True) and item["passed"]
+    passed_before = {item["id"] for item in before["metrics"]["acceptance"]["value"] if item["passed"]}
+    return [
+        {
+            "metric": f"acceptance:{criterion}",
+            "before": True,
+            "after": after_passed.get(criterion),
+            "reason": "criterion_failed" if criterion in after_passed else "criterion_missing",
+        }
+        for criterion in sorted(passed_before)
+        if after_passed.get(criterion) is not True
+    ]
+
+
+def _gated_amount(run: Mapping[str, Any], name: str) -> Any:
+    value = run["metrics"][name]["value"]
+    return len(value) if name in _GATED_COUNTS else value
+
+
+def _finite(value: Any) -> bool:
+    try:
+        return math.isfinite(value)
+    except OverflowError:  # an int beyond float range is not a usable measurement
+        return False
+
+
+def _exceeds(old: Any, new: Any, limit: float) -> bool:
+    """new > old * (1 + limit) in exact decimal arithmetic, so a rise of exactly `limit` is not a regression."""
+    with localcontext() as context:
+        context.prec = 400
+        return Decimal(str(new)) > Decimal(str(old)) * (1 + Decimal(repr(limit)))
+
+
+def _max_regression(value: Any) -> float:
+    if not _is_number(value) or not _finite(value) or value < 0:
+        raise ValueError("max_regression must be a finite number greater than or equal to 0")
+    return float(value)
+
+
+def _unique_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    if len({key for key, _ in pairs}) != len(pairs):
+        raise ValueError("duplicate JSON object key")  # a later duplicate could hide a regressed value
+    return dict(pairs)
+
+
+def _load_fixture(fixture: str | Path | Mapping[str, Any], *, strict: bool = False) -> dict[str, Any]:
     if isinstance(fixture, Mapping):
         return dict(fixture)
     try:
         path = Path(fixture)
-        parsed = json.loads(path.read_text(encoding="utf-8"))
+        parsed = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_unique_pairs if strict else None)
     except (OSError, UnicodeError, json.JSONDecodeError, TypeError) as exc:
         raise ValueError("fixture must be a readable UTF-8 JSON file or mapping") from exc
     if not isinstance(parsed, dict):
@@ -220,7 +330,7 @@ def _validate_fixture(data: Mapping[str, Any]) -> None:
             raise ValueError(f"{name} must be a string or null")
     for name in _OPTIONAL_NUMBER_FIELDS:
         value = data[name]
-        if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0):
+        if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not _finite(value) or value < 0):
             raise ValueError(f"{name} must be a non-negative finite number or null")
     sources = data.get("measurement_sources", {})
     if not isinstance(sources, dict):
@@ -248,7 +358,7 @@ def _read_versions(
 
 
 def _finite_number(value: Any, label: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not _finite(value):
         raise ValueError(f"{label} must return a finite number")
     return float(value)
 
@@ -306,7 +416,7 @@ def _validate_result(result: Mapping[str, Any], label: str) -> None:
         if (value is None) != (source["kind"] == "unavailable"):
             raise ValueError(f"{label} run has inconsistent availability for {name}")
         if name in ("elapsed_seconds", "input_tokens", "output_tokens", "cost_usd") and value is not None:
-            if not _is_number(value) or not math.isfinite(value) or value < 0:
+            if not _is_number(value) or not _finite(value) or value < 0:
                 raise ValueError(f"{label} run has an invalid numeric value for {name}")
         if name in _LIST_FIELDS and (not isinstance(value, list) or not _valid_list_metric(name, value)):
             raise ValueError(f"{label} run has an invalid list value for {name}")
@@ -384,16 +494,31 @@ def main(argv: list[str] | None = None) -> int:
     compare_parser = commands.add_parser("compare", help="compare two saved result JSON files")
     compare_parser.add_argument("before", help="earlier result JSON file")
     compare_parser.add_argument("after", help="later result JSON file")
+    compare_parser.add_argument(
+        "--max-regression",
+        type=float,
+        help="fail when a gated metric rises beyond this ratio (0.10 allows a 10 percent increase)",
+    )
     args = parser.parse_args(argv)
 
-    if args.command == "run":
-        result = run_fixture(args.fixture, execution_id=args.execution_id)
-    else:
-        before = _load_fixture(args.before)
-        after = _load_fixture(args.after)
-        result = compare_runs(before, after)
+    code = 0
+    try:
+        if args.command == "run":
+            result = run_fixture(args.fixture, execution_id=args.execution_id)
+        else:
+            strict = args.max_regression is not None
+            before = _load_fixture(args.before, strict=strict)
+            after = _load_fixture(args.after, strict=strict)
+            result = compare_runs(before, after)
+            if args.max_regression is not None:
+                gate = gate_comparison(before, after, result, args.max_regression)
+                result["gate"] = gate
+                code = GATE_EXIT_CODES[gate["status"]]
+    except (OSError, ValueError) as exc:
+        print(f"baseline: {exc}", file=sys.stderr)
+        return 2
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0
+    return code
 
 
 if __name__ == "__main__":  # pragma: no cover - exercised as a command by users

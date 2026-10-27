@@ -43,7 +43,7 @@ def _source_skill(repository: Path, host: str) -> bytes:
     source_path = repository / "skills" / _PROFILE / _SKILL
     content = source_path.read_text(encoding="utf-8")
     runner = (repository / "scripts" / "inonu.py").resolve()
-    content = content.replace("python scripts/inonu.py", render_runner_command(runner, host))
+    content = content.replace('python "${CLAUDE_PLUGIN_ROOT}/scripts/inonu.py"', render_runner_command(runner, host))
     link_pattern = re.compile(r"\]\((\.\./\.\./docs/[^)]+)\)")
 
     def resolve_doc(match: re.Match[str]) -> str:

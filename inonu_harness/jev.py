@@ -58,8 +58,13 @@ _SENSITIVE = (
 )
 
 
+def _length(value: str) -> int:
+    """Length as the Jev server counts it: a JavaScript string length, in UTF-16 code units (an emoji counts 2)."""
+    return len(value) + sum(1 for char in value if ord(char) > 0xFFFF)
+
+
 def _text(value: Any, limit: int) -> bool:
-    return isinstance(value, str) and bool(value.strip()) and len(value) <= limit
+    return isinstance(value, str) and bool(value.strip()) and _length(value) <= limit
 
 
 def _finite_number(value: Any) -> bool:
@@ -90,7 +95,7 @@ def _validate_spec(raw: Mapping[str, Any]) -> dict[str, Any]:
     for key, value in facts.items():
         if not isinstance(key, str) or not key:
             raise ValueError("decision spec has an invalid fact key")
-        valid = (isinstance(value, str) and len(value) <= 300) or value is None or isinstance(value, bool) or _finite_number(value)
+        valid = (isinstance(value, str) and _length(value) <= 300) or value is None or isinstance(value, bool) or _finite_number(value)
         if not valid:
             raise ValueError("decision spec has an invalid fact value")
         clean_facts[key] = value

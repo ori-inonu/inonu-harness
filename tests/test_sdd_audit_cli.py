@@ -24,6 +24,14 @@ AUDIT_CASES = {
 }
 
 
+class RecordedSelfAuditTests(unittest.TestCase):
+    def test_the_self_audit_recorded_for_milestone_8_still_passes(self):
+        """audit.json pins the bytes of three files; an edit to any of them (a renumbering, a typo fix) must refresh the pins."""
+        root = REPO_ROOT / "docs" / "specs" / "milestones" / "v0.0.8"
+        report = audit_manifest(load_audit_manifest(root / "audit.json"), root)
+        self.assertEqual("pass", report["status"], report)
+
+
 class SddAuditCliTests(unittest.TestCase):
     def run_cli(self, argv: list[str]) -> tuple[int, str, str]:
         stdout, stderr = StringIO(), StringIO()
